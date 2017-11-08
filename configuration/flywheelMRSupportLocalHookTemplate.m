@@ -18,3 +18,8 @@ fprintf('* Running flywheelMRSupportLocalHook...');
 %% Set preferences
 
 % Currently nothing to set
+
+% Instantiate my flywheel object
+myFlywheelAPIKey='Copy this value from flywheel and paste here';
+
+fw = Flywheel(myFlywheelAPIKey)
