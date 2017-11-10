@@ -13,13 +13,14 @@ function flywheelMRSupportLocalHook
 % to match what is true on your computer.
 
 %% Say hello
-fprintf('* Running flywheelMRSupportLocalHook...');
+fprintf('* Running flywheelMRSupportLocalHook\n');
+toolboxName = 'flywheelMRSupport';
 
-%% Set preferences
+%% Clear out stray prefs
+if (ispref(toolboxName))
+    rmpref(toolboxName);
+end
 
-% Currently nothing to set
-
-% Instantiate my flywheel object
-myFlywheelAPIKey='Copy this value from flywheel and paste here';
-
-fw = Flywheel(myFlywheelAPIKey)
+%% Set flywheel API key as a preference
+flywheelAPIKey='Copy this value from flywheel and paste here';
+setpref(toolboxName,'flywheelAPIKey',flywheelAPIKey);
