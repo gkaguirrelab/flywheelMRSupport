@@ -24,3 +24,20 @@ end
 %% Set flywheel API key as a preference
 flywheelAPIKey='Copy this value from flywheel and paste here';
 setpref(toolboxName,'flywheelAPIKey',flywheelAPIKey);
+
+%% Set where we will download data to stage analysis
+sysInfo = GetComputerInfo();
+switch (sysInfo.localHostName)
+    case 'eagleray'
+        % DHB's desktop
+        baseDir = fullfile(filesep,'Volumes','Users1','Dropbox (Aguirre-Brainard Lab)');
+        
+    otherwise
+        % Some unspecified machine, try user specific customization
+        switch(sysInfo.userShortName)
+            % Could put user specific things in, but at the moment generic
+            % is good enough.
+            otherwise
+                baseDir = fullfile('/Users',sysInfo.userShortName,'Dropbox (Aguirre-Brainard Lab)');
+        end
+end
