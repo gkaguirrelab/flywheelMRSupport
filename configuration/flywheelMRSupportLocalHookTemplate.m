@@ -1,5 +1,5 @@
 function flywheelMRSupportLocalHook
-% flywheelMRSupport
+% flywheelMRSupportLocalHook
 %
 % For use with the ToolboxToolbox.  Copy this into your
 % ToolboxToolbox localToolboxHooks directory (by defalut,
