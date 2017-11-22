@@ -35,6 +35,6 @@ switch userID
         % Could put user specific things in, but at the moment generic
         % is good enough.
     otherwise
-        baseDir = fullfile('/Users',sysInfo.userShortName,'Dropbox (Aguirre-Brainard Lab)');
+        baseDir = fullfile('/Users',userID,'Dropbox (Aguirre-Brainard Lab)');
 end
 
