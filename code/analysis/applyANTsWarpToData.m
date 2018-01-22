@@ -1,21 +1,28 @@
 function [] = applyANTsWarpToData(inFiles,params,varargin)
 % applyANTsWarpToData -- Apply the ANTs registration file from frmiprep to the output of the benson atlas.
 %
-%   Details: This function uses the ANTS command line tools to
-%            warp/register a nifti volume (e.g. Benson atlas
-%            outputs) and resamples to a reference volume to match the functional data space. *Needs Freesurfer*
+%   Details: This function uses the ANTS command line tools to call 
+%            antsApplyTransforms which will warp/register a nifti volume 
+%            (e.g. Benson atlas outputs) and resample voxel size to a 
+%            reference volume  (e.g. my_functional_data_MNI_space.nii.gz) 
+%            to generate an output volume. *Needs ANTs compiled binaries set 
+%            in the system path: see github wiki page for flywheelMRSupport
+%            (https://github.com/gkaguirrelab/flywheelMRSupport/wiki)*
 %
 %   Inputs:
 %       inFiles                 = Input volume to be warped
 %       Required params subfields
-%           params.path2input   = 
-%           params.path2ref     = 
-%           params.refFileName  = 
-%           params.path2warp    =
-%           params.warpFileName =
+%           params.path2input   = Path to iunput volume
+%           params.path2ref     = Path to refernce file 
+%           params.refFileName  = Reference file name. This will set the
+%                                 resolution of the warp output volume
+%           params.path2warp    = Path to the warp file
+%           params.warpFileName = Warp file(.h5) that ANTs applies to the
+%                                 input volume
 %       varargin:
-%           verbose             =
-%           dimensions          = 
+%           verbose             = Print stuff to the screen for
+%                                 antsApplyTransforms (default true) 
+%           dimensions          = Dimesionality of warp (default 3) 
 %   Output:
 %       NONE
 %
@@ -24,9 +31,10 @@ function [] = applyANTsWarpToData(inFiles,params,varargin)
 %       params.path2input   = '/home/user/myTemplates/data/'
 %       params.path2ref     = '/home/user/experiments/func/'
 %       params.refFileName  = 'subj_001_sesion_task_run-1_bold_space-MNI_brainmask.nii.gz';
-%       params.path2warp    = 
-%       params.warpFileName =
-%       applyRetAtlas2Functional(inFiles,params,varargin)
+%       params.path2warp    = '/home/user/experiments/anat/'
+%       params.warpFileName =   'subj_001_sesion_T1w_target-MNI152NLin2009cAsym_warp.h5'
+%       
+%       [] = applyANTsWarpToData(inFiles,params);
 %
 
 % mab 2017 -- created
