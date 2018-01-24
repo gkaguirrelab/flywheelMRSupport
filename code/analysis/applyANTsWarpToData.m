@@ -1,4 +1,4 @@
-function [] = applyANTsWarpToData(inFiles,params,varargin)
+function [outputs] = applyANTsWarpToData(inFiles,params,varargin)
 % applyANTsWarpToData -- Apply the ANTs registration file from frmiprep to the output of the benson atlas.
 %
 %   Details: This function uses the ANTS command line tools to call 
@@ -10,7 +10,7 @@ function [] = applyANTsWarpToData(inFiles,params,varargin)
 %            (https://github.com/gkaguirrelab/flywheelMRSupport/wiki)*
 %
 %   Inputs:
-%       inFiles                 = Input volume to be warped
+%       inFiles                 = Input volume to be warped. Must be a cell
 %       Required params subfields
 %           params.path2input   = Path to iunput volume
 %           params.path2ref     = Path to refernce file 
@@ -24,7 +24,7 @@ function [] = applyANTsWarpToData(inFiles,params,varargin)
 %                                 antsApplyTransforms (default true) 
 %           dimensions          = Dimesionality of warp (default 3) 
 %   Output:
-%       NONE
+%       outputs = a cell of the output filenames;
 %
 %   Call:
 %       inFiles             = 'subj_001_native.template_areas.nii.gz'
@@ -37,37 +37,31 @@ function [] = applyANTsWarpToData(inFiles,params,varargin)
 %       [] = applyANTsWarpToData(inFiles,params);
 %
 
-% mab 2017 -- created
+% mab 2018 -- created
 
 p = inputParser;
 p.addParameter('verbose',1,@isnumeric);
 p.addParameter('dimensions',3,@isnumeric);
 p.parse(varargin{:});
 
-
 for ii = 1:length(inFiles)
-    % set up file names
-    
-    %input file
-    inFile = fullfile(params.path2ret,inFiles{ii});
-    
-    %output file
+    %% set up file names
+    % input file
+    inFile = fullfile(params.path2input,inFiles{ii});
+    % output file
     [~,tempName,~] = fileparts(inFile);
     [~,outName,~] = fileparts(tempName);
     outFile = fullfile(params.path2ret,[outName '_MNI_resampled.nii.gz']);
-    
+    outputs{ii} = outFile;
     %reference file
     refFile = fullfile(params.path2ref,params.refFileName);
     
     %warp file
     warpFile = fullfile(params.path2warp,params.warpFileName);
     
-    cmd = ['antsApplyTransforms -d ' p.dimensions ' -o ' outfile '-v ' p.verbose ' -t ' ...
+    cmd = ['antsApplyTransforms -d ' num2str(p.Results.dimensions) ' -o ' outFile '-v ' num2str(p.Results.verbose) ' -t ' ...
             warpFile ' -i ' inFile ' -r ' refFile];
-
-
-
-
+    system(cmd);
 end
 
 
