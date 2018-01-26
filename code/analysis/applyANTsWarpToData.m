@@ -39,11 +39,11 @@ p.addParameter('dimensions',3,@isnumeric);
 p.parse(varargin{:});
 
 % Generaate antsApplyTransform command 
-cmd = ['antsApplyTransforms -d ' num2str(p.Results.dimensions) ' -o ' outFile '-v ' num2str(p.Results.verbose) ' -t ' ...
+cmd = ['/usr/local/ANTS/bin/bin/antsApplyTransforms -d ' num2str(p.Results.dimensions) ' -o ' outFile ' -v ' num2str(p.Results.verbose) ' -t ' ...
         warpFile ' -i ' inFile ' -r ' refFile];
 % Run antsApplyTramsforms command
-display(cmd)
-%system(cmd);
+%display(cmd)
+system(cmd);
 
 
 
