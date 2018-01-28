@@ -38,3 +38,6 @@ switch userID
         baseDir = fullfile('/Users',userID,'Dropbox (Aguirre-Brainard Lab)');
 end
 
+%% Paths to local applications needed to run this file
+setpref(toolboxName,'binANTS','/usr/local/ANTS/bin/bin/');
+

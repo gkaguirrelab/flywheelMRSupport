@@ -31,17 +31,21 @@ function [] = applyANTsWarpToData(inFile, outFile, warpFile, refFile, varargin)
 %       
 %       [] = applyANTsWarpToData(inFile,outFile,warpFile,refFile,varargin)
 
-% mab 2018 -- created
+% History:
+% 01/xx/18 mab  Created
+% 01/28/18 dhb  Use pref for ANTS bin location
 
+%% Parse inputs
 p = inputParser;
 p.addParameter('verbose',1,@isnumeric);
 p.addParameter('dimensions',3,@isnumeric);
 p.parse(varargin{:});
 
-% Generaate antsApplyTransform command 
-cmd = ['/usr/local/ANTS/bin/bin/antsApplyTransforms -d ' num2str(p.Results.dimensions) ' -o ' outFile ' -v ' num2str(p.Results.verbose) ' -t ' ...
+%% Generaate antsApplyTransform command 
+cmd = [fullfile(getpref('flywheelMRSupport','binANTS'),antsApplyTransforms) ' -d ' num2str(p.Results.dimensions) ' -o ' outFile ' -v ' num2str(p.Results.verbose) ' -t ' ...
         warpFile ' -i ' inFile ' -r ' refFile];
-% Run antsApplyTramsforms command
+    
+%% Run antsApplyTramsforms command
 %display(cmd)
 system(cmd);
 
