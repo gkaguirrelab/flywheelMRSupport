@@ -1,9 +1,10 @@
-function [] = GetDataFromFlywheel(theProject,analysisLabel)
+function [] = GetDataFromFlywheel(theProject,analysisLabel,analysisScratchDir)
 % GetDataFromFlywheel 
 %
 % Description:
 %   Use api to download data from flywheel from flywheel based an a given 
 %   project name and analysis label.
+%
 % Inputs:
 %  theProject    = Define the project. This is the name of the project as
 %                  it appears in the Flywheel projects tab: this can be
@@ -12,18 +13,30 @@ function [] = GetDataFromFlywheel(theProject,analysisLabel)
 %                  it appears on Flywheel in the projects directory under 
 %                  the analysis tab: the analysis name can be found after the  
 %                  "Session Analysis |" string on the analysis tab. 
-% Outut:
-%   None
-% See also:
-%   GetDataFromFlywheelExample
+%  analysisScratchDir = This is a string specifying the directory where
+%                  this routine should put its files.
 %
-% Example Call: 
-%   theProject = 'LFContrast';
-%   analysisLabel = 'fmriprep033 01/19/2018 17:14:36';
-%   GetDataFromFlywheel(theProject,analysisLabel);
+% Outputs:
+%   None.
+%
+% Optional key/value pairs:
+%    None.
+%
+% Examples are provided in the source code.
+%
+% See also:
+%
 
 % History
 %  1/31/18  mab  Created from previous example script.
+
+% Examples:
+%{
+    % Downloads an analysis into tempdir
+    theProject = 'LFContrast';
+    analysisLabel = 'fmriprep033 01/19/2018 17:14:36';
+    GetDataFromFlywheel(theProject,analysisLabel,tempdir);
+%}
 
 %% Open flywheel object
 fw = Flywheel(getpref('flywheelMRSupport','flywheelAPIKey'));
@@ -80,9 +93,8 @@ end
 
 
 % Where do you want the files stored? 
-out_dir = getpref('LFContrastAnalysis','analysisScratchDir');
-if (~exist(out_dir,'dir'))
-    mkdir(out_dir);
+if (~exist(analysisScratchDir,'dir'))
+    mkdir(analysisScratchDir);
 end
 
 %% Set-up search structure and search 
@@ -94,10 +106,15 @@ results = fw.search(searchStruct);
 % Iterate over results and download the files
 for ii = 1:numel(results)
     file_name = results(ii).file.name;
-    output_name = fullfile(out_dir, file_name);
+    output_name = fullfile(analysisScratchDir, file_name);
     
     session_id = results(ii).session.x_id;
     analysis_id = results(ii).analysis.x_id;
+    
+    % Could add logic right here that looks for a log file
+    % GetDataFromFlywheel.log and if it finds a line with the analysis_id
+    % in it, doesn't bother with the long download because we already have
+    % the file (or prompts and asks, or ...)
 
     fprintf('Downloading %dMB file: %s ... \n', round(results(ii).file.size / 1000000), file_name);
     tic; fw.downloadFileFromAnalysis(session_id, analysis_id, file_name, output_name); toc
@@ -112,7 +129,7 @@ for ii = 1:numel(results)
     switch (ext)
         case '.zip'
             fprintf('Unzipping %s\n',output_name);
-            system(['unzip ' output_name]);
+            system(['unzip -o ' output_name]);
     end
 end
 
