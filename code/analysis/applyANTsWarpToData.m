@@ -42,7 +42,7 @@ p.addParameter('dimensions',3,@isnumeric);
 p.parse(varargin{:});
 
 %% Generaate antsApplyTransform command 
-cmd = [fullfile(getpref('flywheelMRSupport','binANTS'),antsApplyTransforms) ' -d ' num2str(p.Results.dimensions) ' -o ' outFile ' -v ' num2str(p.Results.verbose) ' -t ' ...
+cmd = [fullfile(getpref('flywheelMRSupport','binANTS'),'antsApplyTransforms') ' -d ' num2str(p.Results.dimensions) ' -o ' outFile ' -v ' num2str(p.Results.verbose) ' -t ' ...
         warpFile ' -i ' inFile ' -r ' refFile];
     
 %% Run antsApplyTramsforms command
