@@ -34,7 +34,7 @@ function [] = GetDataFromFlywheel(theProject,analysisLabel,analysisScratchDir)
 %{
     % Downloads an analysis into tempdir
     theProject = 'LFContrast';
-    analysisLabel = 'fmriprep033 01/19/2018 17:14:36';
+    analysisLabel = 'fmriprep 02/09/2018 11:40:55';
     GetDataFromFlywheel(theProject,analysisLabel,tempdir);
 %}
 
@@ -110,6 +110,7 @@ for ii = 1:numel(results)
     
     session_id = results(ii).session.x_id;
     analysis_id = results(ii).analysis.x_id;
+    subject = results(ii).subject.code;
     
     % Could add logic right here that looks for a log file
     % GetDataFromFlywheel.log and if it finds a line with the analysis_id
@@ -117,19 +118,21 @@ for ii = 1:numel(results)
     % the file (or prompts and asks, or ...)
 
     fprintf('Downloading %dMB file: %s ... \n', round(results(ii).file.size / 1000000), file_name);
-    tic; fw.downloadFileFromAnalysis(session_id, analysis_id, file_name, output_name); toc
+    %tic; fw.downloadFileFromAnalysis(session_id, analysis_id, file_name, output_name); toc
     
-    % Figure out if it's zipped, and unzip if so.  This unpacks into a
-    % whole directory tree that matches the structure on our flywheel
-    % server.  This may or may not be what we want.
     %
     % We don't know quite what happens if we unzip more than one file, but
     % sooner or later we will find out.
     [~,body,ext] = fileparts(file_name);
+    unzipDir = fullfile(analysisScratchDir,[subject '_' analysis_id]);
     switch (ext)
         case '.zip'
             fprintf('Unzipping %s\n',output_name);
-            system(['unzip -o ' output_name]);
+            if (~exist(unzipDir,'dir'))
+                mkdir(unzipDir);
+            end
+            system(['unzip -o ' output_name ' -d ' unzipDir]);
+            %delete(output_name);
     end
 end
 
