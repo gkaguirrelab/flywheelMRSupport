@@ -1,8 +1,8 @@
 function [] = GetDataFromFlywheel(theProject,analysisLabel,analysisScratchDir)
-% GetDataFromFlywheel 
+% GetDataFromFlywheel
 %
 % Description:
-%   Use api to download data from flywheel from flywheel based an a given 
+%   Use api to download data from flywheel from flywheel based an a given
 %   project name and analysis label.
 %
 % Inputs:
@@ -10,9 +10,9 @@ function [] = GetDataFromFlywheel(theProject,analysisLabel,analysisScratchDir)
 %                  it appears in the Flywheel projects tab: this can be
 %                  found at (https://flywheel.sas.upenn.edu/#/projects)
 %  analysisLabel = Define the analysis. This is the name of the analysis as
-%                  it appears on Flywheel in the projects directory under 
-%                  the analysis tab: the analysis name can be found after the  
-%                  "Session Analysis |" string on the analysis tab. 
+%                  it appears on Flywheel in the projects directory under
+%                  the analysis tab: the analysis name can be found after the
+%                  "Session Analysis |" string on the analysis tab.
 %  analysisScratchDir = This is a string specifying the directory where
 %                  this routine should put its files.
 %
@@ -41,7 +41,7 @@ function [] = GetDataFromFlywheel(theProject,analysisLabel,analysisScratchDir)
 %% Open flywheel object
 fw = Flywheel(getpref('flywheelMRSupport','flywheelAPIKey'));
 
-%% Find out who we are 
+%% Find out who we are
 me = fw.getCurrentUser();
 fprintf('I am %s %s\n', me.firstname, me.lastname);
 
@@ -49,8 +49,8 @@ fprintf('I am %s %s\n', me.firstname, me.lastname);
 theProjectIndex = [];
 projects = fw.getAllProjects();
 
-%% In the case of a user only have one project on flywheel. Turns the struct 
-%  into a cell so that the indexing  
+%% In the case of a user only have one project on flywheel. Turns the struct
+%  into a cell so that the indexing
 if ~iscell(projects)
     tmpProject{1} = projects;
     projects = tmpProject;
@@ -88,16 +88,16 @@ end
 %
 % Given some analysis label, download the files that were generated.
 %
-% For this we use: 
+% For this we use:
 %   fw.downloadFileFromAnalysis(session_id, analysis_id, file_name, output_name)
 
 
-% Where do you want the files stored? 
+% Where do you want the files stored?
 if (~exist(analysisScratchDir,'dir'))
     mkdir(analysisScratchDir);
 end
 
-%% Set-up search structure and search 
+%% Set-up search structure and search
 searchStruct = struct('return_type', 'file', ...
     'filters', {{struct('term', ...
     struct('analysis0x2elabel', analysisLabel))}});
@@ -116,23 +116,28 @@ for ii = 1:numel(results)
     % GetDataFromFlywheel.log and if it finds a line with the analysis_id
     % in it, doesn't bother with the long download because we already have
     % the file (or prompts and asks, or ...)
-
-    fprintf('Downloading %dMB file: %s ... \n', round(results(ii).file.size / 1000000), file_name);
-    %tic; fw.downloadFileFromAnalysis(session_id, analysis_id, file_name, output_name); toc
     
-    %
-    % We don't know quite what happens if we unzip more than one file, but
-    % sooner or later we will find out.
-    [~,body,ext] = fileparts(file_name);
-    unzipDir = fullfile(analysisScratchDir,[subject '_' analysis_id]);
-    switch (ext)
-        case '.zip'
-            fprintf('Unzipping %s\n',output_name);
-            if (~exist(unzipDir,'dir'))
-                mkdir(unzipDir);
-            end
-            system(['unzip -o ' output_name ' -d ' unzipDir]);
-            %delete(output_name);
+    [~,cmdout] = unixFind(analysis_id, analysisScratchDir, 'searchCase', 'wildcard');
+    if ~isempty(cmdout)
+        fprintf('WARNING: File found in search contianing the analysis id: %s \n', analysis_id);
+    else
+        fprintf('Downloading %dMB file: %s ... \n', round(results(ii).file.size / 1000000), file_name);
+        tic; fw.downloadFileFromAnalysis(session_id, analysis_id, file_name, output_name); toc
+        
+        %
+        % We don't know quite what happens if we unzip more than one file, but
+        % sooner or later we will find out.
+        [~,body,ext] = fileparts(file_name);
+        unzipDir = fullfile(analysisScratchDir,[subject '_' analysis_id]);
+        switch (ext)
+            case '.zip'
+                fprintf('Unzipping %s\n',output_name);
+                if (~exist(unzipDir,'dir'))
+                    mkdir(unzipDir);
+                end
+                system(['unzip -o ' output_name ' -d ' unzipDir]);
+                %delete(output_name);
+        end
     end
 end
 
