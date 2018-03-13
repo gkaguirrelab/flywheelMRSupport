@@ -102,25 +102,25 @@ searchStruct = struct('return_type', 'file', ...
     'filters', {{struct('term', ...
     struct('analysis0x2elabel', analysisLabel))}});
 results = fw.search(searchStruct);
-
-% Iterate over results and download the files
-for ii = 1:numel(results)
-    file_name = results(ii).file.name;
-    output_name = fullfile(analysisScratchDir, file_name);
-    
-    session_id = results(ii).session.x_id;
-    analysis_id = results(ii).analysis.x_id;
-    subject = results(ii).subject.code;
-    
-    % Could add logic right here that looks for a log file
-    % GetDataFromFlywheel.log and if it finds a line with the analysis_id
-    % in it, doesn't bother with the long download because we already have
-    % the file (or prompts and asks, or ...)
-    
-    [~,cmdout] = unixFind(analysis_id, analysisScratchDir, 'searchCase', 'wildcard');
-    if ~isempty(cmdout)
-        fprintf('WARNING: File found in search contianing the analysis id: %s \n', analysis_id);
-    else
+[~,cmdout] = unixFind(results(1).analysis.x_id, analysisScratchDir, 'searchCase', 'wildcard');
+if ~isempty(cmdout)
+    fprintf('WARNING: File found in search contianing the analysis id: %s \n',results(1).analysis.x_id);
+else
+    % Iterate over results and download the files
+    for ii = 1:numel(results)
+        file_name = results(ii).file.name;
+        output_name = fullfile(analysisScratchDir, file_name);
+        
+        session_id = results(ii).session.x_id;
+        analysis_id = results(ii).analysis.x_id;
+        subject = results(ii).subject.code;
+        
+        % Could add logic right here that looks for a log file
+        % GetDataFromFlywheel.log and if it finds a line with the analysis_id
+        % in it, doesn't bother with the long download because we already have
+        % the file (or prompts and asks, or ...)
+        
+        
         fprintf('Downloading %dMB file: %s ... \n', round(results(ii).file.size / 1000000), file_name);
         tic; fw.downloadFileFromAnalysis(session_id, analysis_id, file_name, output_name); toc
         
@@ -139,6 +139,6 @@ for ii = 1:numel(results)
                 %delete(output_name);
         end
     end
-end
-
+end  
+    
 end
