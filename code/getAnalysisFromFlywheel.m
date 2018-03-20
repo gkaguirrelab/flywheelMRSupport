@@ -1,8 +1,8 @@
-function [analysis_id] = getAnalysisFromFlywheel(theProject,analysisLabel,analysisScratchDir, varargin)
+function [analysis_id, session_id] = getAnalysisFromFlywheel(theProject,analysisLabel,analysisScratchDir, varargin)
 % Downloads analysis outputs from flywheel
 %
 % Syntax:
-%  GetAnalysisFromFlywheel(theProject,analysisLabel,analysisScratchDir)
+%  [analysis_id] = GetAnalysisFromFlywheel(theProject,analysisLabel,analysisScratchDir)
 %
 % Description:
 %	Use api to download data from flywheel from flywheel based an a given
@@ -25,6 +25,7 @@ function [analysis_id] = getAnalysisFromFlywheel(theProject,analysisLabel,analys
 %
 % Outputs:
 %   analysis_id           - The unique analysis id set by flywheel
+%   session_id            - The unique session id set by flywheel
 %
 %
 % Examples are provided in the source code.
@@ -99,21 +100,21 @@ end
 if p.Results.verbose
     fprintf('Found project %s!\n',projects{theProjectIndex}.label);
 end
-projectId = projects{ii}.id;
+project_id = projects{ii}.id;
 
 
 %% Check for the specified analysis
-projectSessions = fw.getProjectSessions(projectId);
+projectSessions = fw.getProjectSessions(project_id);
 for ii = 1:length(projectSessions)
     % Get session ID
     if (length(projectSessions) == 1)
-        sessionId{ii} = projectSessions.id;
+        session_id{ii} = projectSessions.id;
     else
-        sessionId{ii} = projectSessions{ii}.id;
+        session_id{ii} = projectSessions{ii}.id;
     end
     
     % Get acquisitions for each session
-    sessionAcqs{ii} = fw.getSessionAcquisitions(sessionId{ii});
+    sessionAcqs{ii} = fw.getSessionAcquisitions(session_id{ii});
 end
 
 
