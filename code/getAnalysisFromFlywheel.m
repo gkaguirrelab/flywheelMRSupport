@@ -1,4 +1,4 @@
-function [] = getAnalysisFromFlywheel(theProject,analysisLabel,analysisScratchDir, varargin)
+function [analysis_id] = getAnalysisFromFlywheel(theProject,analysisLabel,analysisScratchDir, varargin)
 % Downloads analysis outputs from flywheel
 %
 % Syntax:
@@ -24,7 +24,7 @@ function [] = getAnalysisFromFlywheel(theProject,analysisLabel,analysisScratchDi
 %  'verbose'              - Logical flag, default false
 %
 % Outputs:
-%   None.
+%   analysis_id           - The unique analysis id set by flywheel
 %
 %
 % Examples are provided in the source code.
@@ -133,7 +133,8 @@ searchStruct = struct('return_type', 'file', ...
     'filters', {{struct('term', ...
     struct('analysis0x2elabel', analysisLabel))}});
 results = fw.search(searchStruct);
-[~,cmdout] = unixFind(results(1).analysis.x_id, analysisScratchDir, 'searchCase', 'wildcard');
+analysis_id = results(1).analysis.x_id;
+[~,cmdout] = unixFind(analysis_id, analysisScratchDir, 'searchCase', 'wildcard');
 if ~isempty(cmdout)
     warning('flywheelMRSupport:analysisAlreadyPresent','WARNING: File found in search containing the analysis id: %s \n',results(1).analysis.x_id);
 else
@@ -146,16 +147,13 @@ else
         analysis_id = results(ii).analysis.x_id;
         subject = results(ii).subject.code;
         
-        % Could add logic right here that looks for a log file
-        % GetDataFromFlywheel.log and if it finds a line with the analysis_id
-        % in it, doesn't bother with the long download because we already have
-        % the file (or prompts and asks, or ...)
-        
         if p.Results.verbose
             fprintf('Downloading %dMB file: %s ... \n', round(results(ii).file.size / 1000000), file_name);
             tic
         end
+        
         fw.downloadFileFromAnalysis(session_id, analysis_id, file_name, output_name);
+        
         if p.Results.verbose
             toc
         end
