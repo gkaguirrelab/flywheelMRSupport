@@ -1,4 +1,4 @@
-function [analysis_id, session_id] = getAnalysisFromFlywheel(theProject,analysisLabel,analysisScratchDir, varargin)
+function [fwInfo] = getAnalysisFromFlywheel(theProject,analysisLabel,dataDownloadDir, varargin)
 % Downloads analysis outputs from flywheel
 %
 % Syntax:
@@ -22,7 +22,9 @@ function [analysis_id, session_id] = getAnalysisFromFlywheel(theProject,analysis
 %                           this routine should put its files.
 % Optional key/value pairs:
 %  'verbose'              - Logical flag, default false
-%
+%  'searchDir'            - Specify another location for the recursive file 
+%                           search to take place for skip download check: 
+%                           default is the dataDownloadDir location. 
 % Outputs:
 %   analysis_id           - The unique analysis id set by flywheel
 %   session_id            - The unique session id set by flywheel
@@ -50,12 +52,11 @@ p = inputParser; p.KeepUnmatched = false;
 p.addRequired('theProject', @ischar);
 p.addRequired('analysisLabel', @ischar);
 p.addRequired('analysisScratchDir', @ischar);
-
 % Optional params
 p.addParameter('verbose',false, @islogical);
-
+p.addParameter('searchDir', dataDownloadDir, @ischar);
 % parse
-p.parse(theProject, analysisLabel, analysisScratchDir, varargin{:})
+p.parse(theProject, analysisLabel, dataDownloadDir, varargin{:})
 
 
 %% Open flywheel object
@@ -124,8 +125,8 @@ end
 %   fw.downloadFileFromAnalysis(session_id, analysis_id, file_name, output_name)
 
 % Where do we want the files stored?
-if (~exist(analysisScratchDir,'dir'))
-    mkdir(analysisScratchDir);
+if (~exist(dataDownloadDir,'dir'))
+    mkdir(dataDownloadDir);
 end
 
 
@@ -135,14 +136,14 @@ searchStruct = struct('return_type', 'file', ...
     struct('analysis0x2elabel', analysisLabel))}});
 results = fw.search(searchStruct);
 analysis_id = results(1).analysis.x_id;
-[~,cmdout] = unixFind(analysis_id, analysisScratchDir, 'searchCase', 'wildcard');
+[~,cmdout] = unixFind(analysis_id, p.Results.searchDir, 'searchCase', 'wildcard');
 if ~isempty(cmdout)
     warning('flywheelMRSupport:analysisAlreadyPresent','WARNING: File found in search containing the analysis id: %s \n',results(1).analysis.x_id);
 else
     % Iterate over results and download the files
     for ii = 1:numel(results)
         file_name = results(ii).file.name;
-        output_name = fullfile(analysisScratchDir, file_name);
+        output_name = fullfile(dataDownloadDir, file_name);
         
         session_id = results(ii).session.x_id;
         analysis_id = results(ii).analysis.x_id;
@@ -163,7 +164,7 @@ else
         % We don't know quite what happens if we unzip more than one file, but
         % sooner or later we will find out.
         [~,~,ext] = fileparts(file_name);
-        unzipDir = fullfile(analysisScratchDir,[subject '_' analysis_id]);
+        unzipDir = fullfile(dataDownloadDir,[subject '_' analysis_id]);
         switch (ext)
             case '.zip'
                 if p.Results.verbose
@@ -178,4 +179,13 @@ else
     end
 end
 
+%% Create flywheel info struct
+fwInfo.session_id    = results(1).session.x_id;
+fwInfo.analysis_id   = analysis_id;
+fwInfo.label         = results(1).session.label;
+fwInfo.timestamp     = results(1).session.timestamp;
+fwInfo.subject       = results(1).subject.code;
+fwInfo.project_id    = project_id;
+fwInfo.theProject    = theProject;
+fwInfo.analysisLabel = analysisLabel;
 end
