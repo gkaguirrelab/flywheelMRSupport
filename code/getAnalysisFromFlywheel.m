@@ -47,15 +47,17 @@ function [fwInfo] = getAnalysisFromFlywheel(theProject,analysisLabel,dataDownloa
 % Examples:
 %{
     % Downloads an analysis into tempdir
-    theProject = 'LFContrast';
-    analysisLabel = 'fmriprep 02/09/2018 11:40:55';
-    getAnalysisFromFlywheel(theProject,analysisLabel,tempdir);
+    theProject      = 'LFContrast';
+    analysisLabel   = 'fmriprep 02/09/2018 11:40:55';
+    dataDownloadDir =  fullfile(getpref('LFContrastAnalysis','projectRootDir'),'fmriprep');
+    getAnalysisFromFlywheel(theProject,analysisLabel,dataDownloadDir);
 %}
 %{
     % Just get analysis information
-    theProject = 'LFContrast';
-    analysisLabel = 'fmriprep 02/09/2018 11:40:55';
-    fwInfo = getAnalysisFromFlywheel(theProject,analysisLabel,tempdir,'nodownload',true)
+    theProject      = 'LFContrast';
+    analysisLabel   = 'fmriprep 02/09/2018 11:40:55';
+    dataDownloadDir =  fullfile(getpref('LFContrastAnalysis','projectRootDir'),'fmriprep');
+    fwInfo = getAnalysisFromFlywheel(theProject,analysisLabel,dataDownloadDir,'nodownload',true)
 %}
 
 %% Parse vargin for options passed here
