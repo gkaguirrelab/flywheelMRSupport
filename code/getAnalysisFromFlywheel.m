@@ -22,7 +22,7 @@ function [fwInfo] = getAnalysisFromFlywheel(theProject,analysisLabel,dataDownloa
 %                           projects directory under the analysis tab: the
 %                           analysis name can be found after the "Session
 %                           Analysis |" string on the analysis tab.
-%  analysisScratchDir     - This is a string specifying the directory where
+%  dataDownloadDir        - This is a string specifying the directory where
 %                           this routine should put its files.
 %
 % Outputs:
