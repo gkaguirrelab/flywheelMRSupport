@@ -63,6 +63,7 @@ p.parse(filename, varargin{:})
 
 fullConfounds = tdfread('sub-HEROgka1_ses-201709191435_task-tfMRILFContrastAP_run-1_bold_confounds.tsv','\t');
 
+ find( cellfun(@(x)isequal(x,6),{S.b}) )
 switch 
     case 'CSF'
         
