@@ -46,14 +46,14 @@ p = inputParser; p.KeepUnmatched = false;
 p.addRequired('filename', @ischar);
 p.addParameter('CSF',true, @islogical);
 p.addParameter('WhiteMatter',true, @islogical);
-p.addParameter('GlobalSignal',true, @islogical);
+p.addParameter('GlobalSignal',false, @islogical);
 p.addParameter('stdDVARS',false, @islogical);
 p.addParameter('non0x2DstdDVARS',false, @islogical);
 p.addParameter('FramewiseDisplacement',true, @islogical);
 p.addParameter('tCompCor',false, @islogical);
 p.addParameter('aCompCor',false, @islogical);
 p.addParameter('Cosine',false, @islogical);
-p.addParameter('NonSteadyStateOutlier',true, @islogical);
+p.addParameter('NonSteadyStateOutlier',false, @islogical);
 p.addParameter('Translations',false, @islogical);
 p.addParameter('Rotations',false, @islogical);
 p.parse(filename, varargin{:})
@@ -140,6 +140,11 @@ for ii = 1:length(p.UsingDefaults)
             end
     end
 end
+
+%% SANITY CHECK
+% Add code to examine the confounds, and remove those that have no
+% variation (i.e., are all zeros)
+
 
 end
 
