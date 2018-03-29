@@ -128,7 +128,7 @@ for ii = 1:length(p.UsingDefaults)
         case 'NonSteadyStateOutlier'
             if p.Results.NonSteadyStateOutlier
                 confoundRegressors = [confoundRegressors, fullConfounds.NonSteadyStateOutlier00, fullConfounds.NonSteadyStateOutlier01, ...
-                    fullConfounds.NonSteadyStateOutlier02, fullConfounds.NonSteadyStateOutlier03];
+                    fullConfounds.NonSteadyStateOutlier02];
             end
         case 'Translations'
             if p.Results.Translations
