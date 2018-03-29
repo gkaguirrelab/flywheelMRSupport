@@ -1,4 +1,4 @@
-function [confoundRegressors] = getConfoundRegressors(filename, varargin)
+function [confoundRegressors, confoundLabels] = getConfoundRegressors(filename, varargin)
 % Creates confound matrix for TFE
 %
 % Syntax:
@@ -10,26 +10,27 @@ function [confoundRegressors] = getConfoundRegressors(filename, varargin)
 %   pair to true.
 %
 % Inputs:
-%   filename                - Full file name to the confounds .tsv file that
-%                             fmriprep returns in the func folder.
+%   filename              - Full file name to the confounds .tsv file that
+%                           fmriprep returns in the func folder.
 %
 % Outputs:
-%   confoundRegressors      -  timepoint by confound matrix.
+%   confoundRegressors    - timepoint by confound matrix.
+%   confoundLabels        - cell array of names of the confounds
 %
 % Optional key/value pairs:
-%   'CSF'                   - 1 column 
-%   'WhiteMatter'           - 1 column
-%   'GlobalSignal'          - 1 column
-%   'stdDVARS'              - 1 column
-%   'non0x2DstdDVARS'       - 1 column
-%   'vx0x2DwisestdDVARS'    - 1 column
+%   'CSF'                 - 1 column 
+%   'WhiteMatter'         - 1 column
+%   'GlobalSignal'        - 1 column
+%   'stdDVARS'            - 1 column
+%   'non0x2DstdDVARS'     - 1 column
+%   'vx0x2DwisestdDVARS'  - 1 column
 %   'FramewiseDisplacement' - 1 column
-%   'tCompCor'              - 6 columns
-%   'aCompCor'              - 6 columns
-%   'Cosine'                - 3 columns
+%   'tCompCor'            - 6 columns
+%   'aCompCor'            - 6 columns
+%   'Cosine'              - 3 columns
 %   'NonSteadyStateOutlier' - 3 columns
-%   'Translations'          - 3 columns X Y Z
-%   'Rotations'             - 3 columns X Y Z
+%   'Translations'        - 3 columns X Y Z
+%   'Rotations'           - 3 columns X Y Z
 %
 % Examples are provided in the source code.
 %
@@ -140,6 +141,8 @@ for ii = 1:length(p.UsingDefaults)
             end
     end
 end
+
+
 
 %% SANITY CHECK
 % Add code to examine the confounds, and remove those that have no
