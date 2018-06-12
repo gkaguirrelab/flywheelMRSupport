@@ -1,4 +1,26 @@
-%% Uses the next-gen Alpha SDK
+% getQCMetrics
+% Script to create plots of quality control metrics for a flywheel project
+%
+% Syntax:
+%  getQCMetrics
+%
+% Description:
+%   This routine connects to a Flywheel server and pulls quality assessment
+%   metrics for a selected project. The identity of the flywheel server and
+%   your login credentials are specified by the api_key environment
+%   preference variable. This is set in the localhook file for the
+%   flywheelMRSupport toolbox.
+%
+% Inputs:
+%   none
+%
+% Outputs:
+%   none
+%
+% Examples:
+%{
+    getQCMetrics
+%}
 
 
 %% Init SDK
