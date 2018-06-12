@@ -82,20 +82,26 @@ for ss = 1:numel(project_sessions)
             end
         end
     end
+    % If there are any sessions with qa files, they are added to QA
     if ~isempty(session.acquisitions)
         QA{end+1} = session;
     end
 end
 
-% Create plots for the modalities
+
+%% Create plots for the modalities
+% Metrics are placed within respective modality arrays
 modalityLabels = {'T1w','T2w','bold'};
+% Metrics of interest are placed here
 metricLabels = {'cjv','cnr','efc';'cjv','cnr','efc';'fd_mean','dvars_std','fd_perc'};
 
 metrics = [];
 dataLabels = [];
 
+% Loop through modalities and metrics to organize the metrics
 for mm = 1:length(modalityLabels)
     metrics.(modalityLabels{mm}) = [];
+    % Loop through the files in QA
     for qq = 1:length(QA)
         for aa = 1:length(QA{qq}.acquisitions)
             if strcmp(QA{qq}.acquisitions{aa}.modality,modalityLabels{mm})
@@ -112,3 +118,33 @@ for mm = 1:length(modalityLabels)
         end
     end
 end
+
+%% Create the Plots
+% Get all the modalities that we want to make plots for
+mods = fieldnames(metrics);
+% Loop through modalities and metrics to create individual plots 
+iter = 1;
+for i = 1:length(mods)
+    %Get all the metrics in the modality
+    mod = metrics.(mods{i});
+    disp(mod);
+    mets = fieldnames(metrics.(mods{i}));
+    for j = 1:length(mets)
+        values = metrics.(mods{i}).(mets{j});
+        disp(values);
+        min = min(values);
+        max = max(values);
+        x = zeros(1,size(values,2));
+        xMin = -(max-min)/2;
+        xMax = (max-min)/2;
+        axis = axes('NextPlot','add','DataAspectRatio',[1,1,1],'XLim',[xMin xMax],'YLim',[0 max],'Color','w');
+        set(gca,'XTick',[]);
+        title(mets(j),'Interpreter','none');
+        subplot(3,3,iter,axis);
+        scatter(axis,x,values, 'jitter','on', 'jitterAmount',0.01,'MarkerFaceColor','b','MarkerEdgeColor','b','MarkerFaceAlpha',.2,'MarkerEdgeAlpha',.2);
+        clear min max;
+        iter = iter+1;
+    end
+end
+    
+    
