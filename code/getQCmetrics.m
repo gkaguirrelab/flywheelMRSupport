@@ -133,79 +133,53 @@ end
 mods = fieldnames(metrics);
 % Loop through modalities and metrics to create individual plots
 for i = 1:length(mods)
-  
-    % Get all the metrics in the modality
-    mod = metrics.(mods{i});
-    disp(mod);
     
-    % Get the individual metrics from each modality
-    mets = fieldnames(metrics.(mods{i}));
-    
-    % Create a figure with for each modality
-    figure('NumberTitle', 'off', 'Name', mods{i});
-
     % Create a figure to hold the plots for this modality
     hFigure = figure('NumberTitle', 'off', 'Name', mods{i});
     
     %Get all the metrics in the modality
-    mod = metrics.(mods{i});
-    if verbose
-        disp(mod);
-    end
     mets = fieldnames(metrics.(mods{i}));
     
-    % Iterator to be used to make subplots
+    % Iterator used to create subplots
     iter = 1;
     
     % Loop through the metrics to begin creating the plots
     for j = 1:length(mets)
+        
+        % Store the values of the metric 
         values = metrics.(mods{i}).(mets{j});
-        disp(values);
         
         % minVal and maxVal are used to scale the y-axis accurately
         
         % If there are no negative values in that metric, the y-axis scale
         % begins from 0 and goes to the maximum
         if all(values>=0)
-                minVal = 0;
-                maxVal = max(values);
-                
+            minVal = 0;
+            maxVal = max(values);
+            
         % If there are any negative values in the metric, the y-axis
         % scale takes the absolute largest quantity from the metric and
         % makes it the maximum and its corresponding negative value the
         % minimum (If absolute maximum value is 10, scale goes from -10 to 10)
         else
-                minTemp = min(values);
-                maxTemp = max(values);
-                if maxTemp > minTemp
-                    minVal = -maxVal;
-                else
-                    maxVal = -minVal; 
-                end
-        end 
-        
-        % xMin and xMax are values that are used to scale the x-axis in
-        % relation to the y-axis to make the data easier to view
-        if verbose
-            disp(values);
-        end
-        if all(values>=0)
-            minVal = 0;
-            maxVal = max(values);
-        else
             minTemp = min(values);
             maxTemp = max(values);
-            if maxVal > minVal
+            if maxTemp > minTemp
                 minVal = -maxVal;
             else
                 maxVal = -minVal;
             end
         end
+        
+        % x is used to plot points on the scatter diagram
         x = zeros(1,size(values,2));
+        
+        % xMin and xMax are values that are used to scale the x-axis in
+        % relation to the y-axis to make the data easier to view
         xMin = -(maxVal-minVal)/2;
         xMax = (maxVal-minVal)/2;
         
-        % Crate the axis for each subplot using the dimensions of xMin,
+        % Create the axis for each subplot using the dimensions of xMin,
         % xMax, minVal, and maxVal
         axis = axes('NextPlot','add','DataAspectRatio',[1,1,1],'XLim',[xMin xMax],'YLim',[minVal maxVal],'Color','w');
         
@@ -220,36 +194,6 @@ for i = 1:length(mods)
         % each iteration (different metric) gets a different plot in the figure 
         subplot(3,3,iter,axis);
         
-        % Loop through the individual values of the metric to begin
-        % plotting them onto the created axis
-        for index = 1:length(values)
-            
-            % Label the values of the metric with different colors on the
-            % plot to identify outliers
-            
-            % If the value is greater than 3 standard deviations from the
-            % mean of the metric values, it is considered an outlier and is
-            % represented with a red circle
-            if values(index) < mean(values) - 3*std(values) || values(index) > mean(values) + 3*std(values)
-                scatter(axis,0,values(index), 'jitter','on', 'jitterAmount',xMax/7,'MarkerFaceColor','r','MarkerEdgeColor','r','MarkerFaceAlpha',.2,'MarkerEdgeAlpha',.2);
-                iterator = 1;
-                for NumQA = 1:length(QA)
-                    for NumAcq = 1:length(QA{NumQA}.acquisitions)
-                        if strcmpi(mods{i},QA{NumQA}.acquisitions{NumAcq}.modality)
-                            if values(index) == QA{NumQA}.acquisitions{NumAcq}.info.(mets{j})
-                                outliers.modality.(mods{i}).(mets{j}).subject{iterator} = QA{NumQA}.subject;
-                                outliers.modality.(mods{i}).(mets{j}).label{iterator} = QA{NumQA}.label;
-                                outliers.modality.(mods{i}).(mets{j}).acquisition{iterator} = QA{NumQA}.acquisitions{NumAcq}.label;
-                                iterator = iterator + 1;
-                            end
-                        end
-                    end
-                end 
-                
-            else
-                    scatter(axis,0,values(index), 'jitter','on', 'jitterAmount',xMax/7,'MarkerFaceColor','b','MarkerEdgeColor','b','MarkerFaceAlpha',.2,'MarkerEdgeAlpha',.2);
-            end
-        end
         % Identify the bounds for outlier values for this metric
         withinThreshMin = nanmean(values) - stdThreshForOutlier * nanstd(values);
         withinThreshMax = nanmean(values) + stdThreshForOutlier * nanstd(values);
@@ -262,6 +206,35 @@ for i = 1:length(mods)
         outsideThreshIdx = ~withinThreshIdx;
         scatter(axis,x(outsideThreshIdx),values(outsideThreshIdx), 'jitter','on', 'jitterAmount',xMax*jitterFactor,'MarkerFaceColor','r','MarkerEdgeColor','r','MarkerFaceAlpha',.2,'MarkerEdgeAlpha',.2);
         
+        % Used for making the outlier structure
+        iterator = 1;
+        
+        % Iterate through the outlier values, identify their properties, and organize them
+        % into an 'outlier' structure
+        for badNums = 1:length(outsideThreshIdx)
+            if outsideThreshIdx(badNums)
+                
+                % Loop through QA to get all sessions and acquisitions
+                for NumQA = 1:length(QA)
+                    for NumAcq = 1:length(QA{NumQA}.acquisitions)
+                        
+                        % Make sure the acquisition has the desired
+                        % modality
+                        if strcmpi(mods{i},QA{NumQA}.acquisitions{NumAcq}.modality)
+                            
+                            % Find the acquisition with the same metric
+                            % quantity as the outlier
+                            if values(badNums) == QA{NumQA}.acquisitions{NumAcq}.info.(mets{j})
+                                outliers.modality.(mods{i}).(mets{j}).subject{iterator} = QA{NumQA}.subject;
+                                outliers.modality.(mods{i}).(mets{j}).label{iterator} = QA{NumQA}.label;
+                                outliers.modality.(mods{i}).(mets{j}).acquisition{iterator} = QA{NumQA}.acquisitions{NumAcq}.label;
+                                iterator = iterator + 1;
+                            end
+                        end
+                    end
+                end
+            end
+        end      
         iter=iter+1;
     end
     
@@ -274,4 +247,3 @@ for i = 1:length(mods)
         close(hFigure);
     end
 end
-
