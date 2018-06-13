@@ -93,7 +93,9 @@ end
 % Metrics are placed within respective modality arrays
 modalityLabels = {'T1w','T2w','bold'};
 % Metrics of interest are placed here
-metricLabels = {'cjv','cnr','efc';'cjv','cnr','efc';'fd_mean','dvars_std','fd_perc'};
+metricLabels = {'cjv','cnr','efc','fber','wm2max','snr_csf','snr_gm','snr_wm';
+                'cjv','cnr','efc','fber','wm2max','snr_csf','snr_gm','snr_wm';
+                'fd_mean','dvars_std','fd_perc','gcor','tsnr','aor','gsr_x','gsr_y'};
 
 metrics = [];
 dataLabels = [];
@@ -123,27 +125,43 @@ end
 % Get all the modalities that we want to make plots for
 mods = fieldnames(metrics);
 % Loop through modalities and metrics to create individual plots 
-iter = 1;
 for i = 1:length(mods)
     %Get all the metrics in the modality
     mod = metrics.(mods{i});
     disp(mod);
     mets = fieldnames(metrics.(mods{i}));
+    figure('NumberTitle', 'off', 'Name', mods{i});
+    iter = 1;
     for j = 1:length(mets)
         values = metrics.(mods{i}).(mets{j});
         disp(values);
-        min = min(values);
-        max = max(values);
+        if all(values>=0)
+                minVal = 0;
+                maxVal = max(values);
+        else
+                minTemp = min(values);
+                maxTemp = max(values);
+                if maxVal > minVal
+                    minVal = -maxVal;
+                else
+                    maxVal = -minVal; 
+                end
+        end           
         x = zeros(1,size(values,2));
-        xMin = -(max-min)/2;
-        xMax = (max-min)/2;
-        axis = axes('NextPlot','add','DataAspectRatio',[1,1,1],'XLim',[xMin xMax],'YLim',[0 max],'Color','w');
+        xMin = -(maxVal-minVal)/2;
+        xMax = (maxVal-minVal)/2;
+        axis = axes('NextPlot','add','DataAspectRatio',[1,1,1],'XLim',[xMin xMax],'YLim',[minVal maxVal],'Color','w');
         set(gca,'XTick',[]);
         title(mets(j),'Interpreter','none');
         subplot(3,3,iter,axis);
-        scatter(axis,x,values, 'jitter','on', 'jitterAmount',0.01,'MarkerFaceColor','b','MarkerEdgeColor','b','MarkerFaceAlpha',.2,'MarkerEdgeAlpha',.2);
-        clear min max;
-        iter = iter+1;
+        for index = 1:length(values)
+            if values(index) < mean(values) - 3*std(values) | values(index) > mean(values) + 3*std(values)
+                scatter(axis,0,values(index), 'jitter','on', 'jitterAmount',xMax/7,'MarkerFaceColor','r','MarkerEdgeColor','r','MarkerFaceAlpha',.2,'MarkerEdgeAlpha',.2);
+            else
+                scatter(axis,0,values(index), 'jitter','on', 'jitterAmount',xMax/7,'MarkerFaceColor','b','MarkerEdgeColor','b','MarkerFaceAlpha',.2,'MarkerEdgeAlpha',.2);
+            end
+        end
+        iter=iter+1;
     end
 end
     
