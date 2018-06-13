@@ -141,7 +141,7 @@ for i = 1:length(mods)
         else
                 minTemp = min(values);
                 maxTemp = max(values);
-                if maxVal > minVal
+                if maxTemp > minTemp
                     minVal = -maxVal;
                 else
                     maxVal = -minVal; 
@@ -157,6 +157,19 @@ for i = 1:length(mods)
         for index = 1:length(values)
             if values(index) < mean(values) - 3*std(values) | values(index) > mean(values) + 3*std(values)
                 scatter(axis,0,values(index), 'jitter','on', 'jitterAmount',xMax/7,'MarkerFaceColor','r','MarkerEdgeColor','r','MarkerFaceAlpha',.2,'MarkerEdgeAlpha',.2);
+                iterator = 1;
+                for NumQA = 1:length(QA)
+                    for NumAcq = 1:length(QA{NumQA}.acquisitions)
+                        if strcmpi(mods{i},QA{NumQA}.acquisitions{NumAcq}.modality)
+                            if values(index) == QA{NumQA}.acquisitions{NumAcq}.info.(mets{j})
+                                outliers.modality.(mods{i}).(mets{j}).subject{iterator} = QA{NumQA}.subject;
+                                outliers.modality.(mods{i}).(mets{j}).label{iterator} = QA{NumQA}.label;
+                                outliers.modality.(mods{i}).(mets{j}).acquisition{iterator} = QA{NumQA}.acquisitions{NumAcq}.label;
+                                iterator = iterator + 1;
+                            end
+                        end
+                    end
+                end 
             else
                 scatter(axis,0,values(index), 'jitter','on', 'jitterAmount',xMax/7,'MarkerFaceColor','b','MarkerEdgeColor','b','MarkerFaceAlpha',.2,'MarkerEdgeAlpha',.2);
             end
