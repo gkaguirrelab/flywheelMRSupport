@@ -23,9 +23,16 @@
 %}
 
 
-%% Init SDK
+%% Hard-coded variables
+verbose = false; % By default, nothing reported to the console.
+stdThreshForOutlier = 3;
+jitterFactor = .25; % The amount of x-axis jitter in the column plots
+outputDirectory = '~/Desktop/';
+closeFigures = true;
 
-api_key = getpref('flywheelMRSupport','flywheelAPIKey'); % <<<< Add your key here
+
+%% Init SDK
+api_key = getpref('flywheelMRSupport','flywheelAPIKey');
 fw = flywheel.Flywheel(api_key);
 
 
@@ -54,13 +61,13 @@ for ss = 1:numel(project_sessions)
     session_acquisitions = fw.getSessionAcquisitions(project_sessions{ss}.id);
     
     % For each acquisition, look at all files, if a given file is qa, then
-    % add that files info to 'qa'. 
+    % add that files info to 'qa'.
     for ii = 1:numel(session_acquisitions)
         files = session_acquisitions{ii}.files;
         acq_id = session_acquisitions{ii}.id;
         acq_label = session_acquisitions{ii}.label;
         
-        % For each file, if that file is 'qa' get its info metadata 
+        % For each file, if that file is 'qa' get its info metadata
         for ff = 1:length(files)
             if strcmpi(files{ff}.type, 'qa')
                 acq = [];
@@ -69,7 +76,7 @@ for ss = 1:numel(project_sessions)
                 
                 % Get the acquisition modality
                 if isfield(acq.info, 'metadata')
-                    acq.modality = acq.info.metadata.modality;                    
+                    acq.modality = acq.info.metadata.modality;
                 end
                 if isfield(acq.info, 'bids_meta')
                     acq.modality = acq.info.bids_meta.modality;
@@ -94,8 +101,8 @@ end
 modalityLabels = {'T1w','T2w','bold'};
 % Metrics of interest are placed here
 metricLabels = {'cjv','cnr','efc','fber','wm2max','snr_csf','snr_gm','snr_wm';
-                'cjv','cnr','efc','fber','wm2max','snr_csf','snr_gm','snr_wm';
-                'fd_mean','dvars_std','fd_perc','gcor','tsnr','aor','gsr_x','gsr_y'};
+    'cjv','cnr','efc','fber','wm2max','snr_csf','snr_gm','snr_wm';
+    'fd_mean','dvars_std','fd_perc','gcor','tsnr','aor','gsr_x','gsr_y'};
 
 metrics = [];
 dataLabels = [];
@@ -124,29 +131,37 @@ end
 %% Create the Plots
 % Get all the modalities that we want to make plots for
 mods = fieldnames(metrics);
-% Loop through modalities and metrics to create individual plots 
+% Loop through modalities and metrics to create individual plots
 for i = 1:length(mods)
+    
+    % Create a figure to hold the plots for this modality
+    hFigure = figure('NumberTitle', 'off', 'Name', mods{i});
+    
     %Get all the metrics in the modality
     mod = metrics.(mods{i});
-    disp(mod);
+    if verbose
+        disp(mod);
+    end
     mets = fieldnames(metrics.(mods{i}));
-    figure('NumberTitle', 'off', 'Name', mods{i});
+
     iter = 1;
     for j = 1:length(mets)
         values = metrics.(mods{i}).(mets{j});
-        disp(values);
+        if verbose
+            disp(values);
+        end
         if all(values>=0)
-                minVal = 0;
-                maxVal = max(values);
+            minVal = 0;
+            maxVal = max(values);
         else
-                minTemp = min(values);
-                maxTemp = max(values);
-                if maxVal > minVal
-                    minVal = -maxVal;
-                else
-                    maxVal = -minVal; 
-                end
-        end           
+            minTemp = min(values);
+            maxTemp = max(values);
+            if maxVal > minVal
+                minVal = -maxVal;
+            else
+                maxVal = -minVal;
+            end
+        end
         x = zeros(1,size(values,2));
         xMin = -(maxVal-minVal)/2;
         xMax = (maxVal-minVal)/2;
@@ -154,16 +169,29 @@ for i = 1:length(mods)
         set(gca,'XTick',[]);
         title(mets(j),'Interpreter','none');
         subplot(3,3,iter,axis);
-        for index = 1:length(values)
-            if values(index) < mean(values) - 3*std(values) | values(index) > mean(values) + 3*std(values)
-                scatter(axis,0,values(index), 'jitter','on', 'jitterAmount',xMax/7,'MarkerFaceColor','r','MarkerEdgeColor','r','MarkerFaceAlpha',.2,'MarkerEdgeAlpha',.2);
-            else
-                scatter(axis,0,values(index), 'jitter','on', 'jitterAmount',xMax/7,'MarkerFaceColor','b','MarkerEdgeColor','b','MarkerFaceAlpha',.2,'MarkerEdgeAlpha',.2);
-            end
-        end
+        
+        % Identify the bounds for outlier values for this metric
+        withinThreshMin = nanmean(values) - stdThreshForOutlier * nanstd(values);
+        withinThreshMax = nanmean(values) + stdThreshForOutlier * nanstd(values);
+        
+        % Plot the within bounds points in blue
+        withinThreshIdx = logical((values > withinThreshMin) .* (values < withinThreshMax));
+        scatter(axis,x(withinThreshIdx),values(withinThreshIdx), 'jitter','on', 'jitterAmount',xMax*jitterFactor,'MarkerFaceColor','b','MarkerEdgeColor','b','MarkerFaceAlpha',.2,'MarkerEdgeAlpha',.2);
+        
+        % Plot the outside bounds points in red
+        outsideThreshIdx = ~withinThreshIdx;
+        scatter(axis,x(outsideThreshIdx),values(outsideThreshIdx), 'jitter','on', 'jitterAmount',xMax*jitterFactor,'MarkerFaceColor','r','MarkerEdgeColor','r','MarkerFaceAlpha',.2,'MarkerEdgeAlpha',.2);
+        
         iter=iter+1;
     end
-    print(mods{i},'-dpdf','-fillpage');
+    
+    % Save the figure as a PDF within the output directory
+    filenameOut = fullfile(outputDirectory,[mods{i} '.pdf']);
+    saveas(hFigure,filenameOut);
+    
+    % Close figure handle
+    if closeFigures
+        close(hFigure);
+    end
 end
-    
-    
+
