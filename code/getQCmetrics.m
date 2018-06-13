@@ -146,7 +146,7 @@ for i = 1:length(mods)
     % Loop through the metrics to begin creating the plots
     for j = 1:length(mets)
         
-        % Store the values of the metric 
+        % Store the values of the metric
         values = metrics.(mods{i}).(mets{j});
         
         % minVal and maxVal are used to scale the y-axis accurately
@@ -157,10 +157,10 @@ for i = 1:length(mods)
             minVal = 0;
             maxVal = max(values);
             
-        % If there are any negative values in the metric, the y-axis
-        % scale takes the absolute largest quantity from the metric and
-        % makes it the maximum and its corresponding negative value the
-        % minimum (If absolute maximum value is 10, scale goes from -10 to 10)
+            % If there are any negative values in the metric, the y-axis
+            % scale takes the absolute largest quantity from the metric and
+            % makes it the maximum and its corresponding negative value the
+            % minimum (If absolute maximum value is 10, scale goes from -10 to 10)
         else
             minTemp = min(values);
             maxTemp = max(values);
@@ -191,7 +191,7 @@ for i = 1:length(mods)
         title(mets(j),'Interpreter','none');
         
         % Place the created axis in the correct position in the figure;
-        % each iteration (different metric) gets a different plot in the figure 
+        % each iteration (different metric) gets a different plot in the figure
         subplot(3,3,iter,axis);
         
         % Identify the bounds for outlier values for this metric
@@ -225,16 +225,16 @@ for i = 1:length(mods)
                             % Find the acquisition with the same metric
                             % quantity as the outlier
                             if values(badNums) == QA{NumQA}.acquisitions{NumAcq}.info.(mets{j})
-                                outliers.modality.(mods{i}).(mets{j}).subject{iterator} = QA{NumQA}.subject;
-                                outliers.modality.(mods{i}).(mets{j}).label{iterator} = QA{NumQA}.label;
-                                outliers.modality.(mods{i}).(mets{j}).acquisition{iterator} = QA{NumQA}.acquisitions{NumAcq}.label;
+                                outliers.(mods{i}).(mets{j}).subject{iterator} = QA{NumQA}.subject;
+                                outliers.(mods{i}).(mets{j}).label{iterator} = QA{NumQA}.label;
+                                outliers.(mods{i}).(mets{j}).acquisition{iterator} = QA{NumQA}.acquisitions{NumAcq}.label;
                                 iterator = iterator + 1;
                             end
                         end
                     end
                 end
             end
-        end      
+        end
         iter=iter+1;
     end
     
@@ -245,5 +245,22 @@ for i = 1:length(mods)
     % Close figure handle
     if closeFigures
         close(hFigure);
+    end
+end
+
+% Output the outliers (if desired)
+modalities = fields(outliers);
+for modalityIdx = 1:length(modalities)
+    metricNames = fields(outliers.(modalities{modalityIdx}));
+    for metricIdx = 1:length(metricNames)
+        for finalIdx = 1:length(outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).subject)
+            if verbose
+                subject = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).subject{finalIdx};
+                session = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).label{finalIdx};
+                scan = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).acquisition{finalIdx};
+                finalDisplay = strcat('Metric:',metricNames{metricIdx},'\nSubject:',subject,'\nSession:',session,'\nScan:',scan,'\n\n');
+                fprintf(finalDisplay);
+            end
+        end
     end
 end
