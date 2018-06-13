@@ -155,7 +155,7 @@ for i = 1:length(mods)
         title(mets(j),'Interpreter','none');
         subplot(3,3,iter,axis);
         for index = 1:length(values)
-            if values(index) < mean(values) - 3*std(values) | values(index) > mean(values) + 3*std(values)
+            if values(index) < mean(values) - 3*std(values) || values(index) > mean(values) + 3*std(values)
                 scatter(axis,0,values(index), 'jitter','on', 'jitterAmount',xMax/7,'MarkerFaceColor','r','MarkerEdgeColor','r','MarkerFaceAlpha',.2,'MarkerEdgeAlpha',.2);
                 iterator = 1;
                 for NumQA = 1:length(QA)
