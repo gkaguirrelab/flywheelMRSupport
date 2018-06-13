@@ -163,6 +163,7 @@ for i = 1:length(mods)
         end
         iter=iter+1;
     end
+    print(mods{i},'-dpdf','-fillpage');
 end
     
     
