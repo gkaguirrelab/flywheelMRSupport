@@ -274,13 +274,15 @@ for modalityIdx = 1:length(modalities)
     metricNames = fields(outliers.(modalities{modalityIdx}));
     for metricIdx = 1:length(metricNames)
         for finalIdx = 1:length(outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).subject)
-            if verbose
                 subject = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).subject{finalIdx};
                 session = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).label{finalIdx};
                 scan = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).acquisition{finalIdx};
                 finalDisplay = strcat('Metric:',metricNames{metricIdx},'\nSubject:',subject,'\nSession:',session,'\nScan:',scan,'\n\n');
-                fprintf(finalDisplay);
-            end
+                fileID = fopen('~/Desktop/outliers.txt','a');
+                fprintf(fileID,finalDisplay);
+                if verbose
+                    fprintf(finalDisplay);
+                end
         end
     end
 end
