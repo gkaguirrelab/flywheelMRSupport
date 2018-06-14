@@ -101,9 +101,15 @@ end
 modalityLabels = {'T1w','T2w','bold'};
 % Metrics of interest are placed here
 metricLabels = {'cjv','cnr','efc','fber','wm2max','snr_csf','snr_gm','snr_wm';
-    'cjv','cnr','efc','fber','wm2max','snr_csf','snr_gm','snr_wm';
-    'fd_mean','dvars_std','fd_perc','gcor','tsnr','aor','gsr_x','gsr_y'};
-
+                'cjv','cnr','efc','fber','wm2max','snr_csf','snr_gm','snr_wm';
+                'fd_mean','dvars_std','fd_perc','gcor','tsnr','aor','gsr_x','gsr_y'};
+% What values are generally bad for the corresponding metric from
+% metricLabels (0 means high values are bad, 1 means low values are bad,
+% 2 means any extreme values are bad)
+metricRanges = {0,1,0,1,2,1,1,1;
+                0,1,0,1,2,1,1,1;
+                0,0,0,1,1,0,0,0};
+                
 metrics = [];
 dataLabels = [];
 
@@ -116,11 +122,14 @@ for mm = 1:length(modalityLabels)
             if strcmp(QA{qq}.acquisitions{aa}.modality,modalityLabels{mm})
                 for kk = 1:length(metricLabels(mm,:))
                     if ~isfield(metrics.(modalityLabels{mm}),(metricLabels{mm,kk}))
-                        metrics.(modalityLabels{mm}).(metricLabels{mm,kk}) = [];
+                        metrics.(modalityLabels{mm}).(metricLabels{mm,kk}).vals = [];
+                        metrics.(modalityLabels{mm}).(metricLabels{mm,kk}).range = [];
                     end
-                    metrics.(modalityLabels{mm}).(metricLabels{mm,kk})= ...
-                        [ metrics.(modalityLabels{mm}).(metricLabels{mm,kk}) ...
+                    metrics.(modalityLabels{mm}).(metricLabels{mm,kk}).vals = ...
+                        [ metrics.(modalityLabels{mm}).(metricLabels{mm,kk}).vals ...
                         QA{qq}.acquisitions{aa}.info.(metricLabels{mm,kk}) ];
+                    metrics.(modalityLabels{mm}).(metricLabels{mm,kk}).range = ...
+                        [metricRanges{mm,kk}];
                     %dataLabels{mm,kk,end+1}=[QA{2}.label QA{2}.subject];
                 end
             end
@@ -146,8 +155,9 @@ for i = 1:length(mods)
     % Loop through the metrics to begin creating the plots
     for j = 1:length(mets)
         
-        % Store the values of the metric
-        values = metrics.(mods{i}).(mets{j});
+        % Store the metric's values and range
+        values = metrics.(mods{i}).(mets{j}).vals;
+        range = metrics.(mods{i}).(mets{j}).range;
         
         % minVal and maxVal are used to scale the y-axis accurately
         
@@ -195,8 +205,18 @@ for i = 1:length(mods)
         subplot(3,3,iter,axis);
         
         % Identify the bounds for outlier values for this metric
-        withinThreshMin = nanmean(values) - stdThreshForOutlier * nanstd(values);
-        withinThreshMax = nanmean(values) + stdThreshForOutlier * nanstd(values);
+        if range == 0
+            withinThreshMin = -Inf;
+            withinThreshMax = nanmean(values) + stdThreshForOutlier * nanstd(values);
+        else
+            if range == 1
+                withinThreshMin = (nanmean(values) - stdThreshForOutlier * nanstd(values));
+                withinThreshMax = Inf;
+            else
+                withinThreshMin = (nanmean(values) - stdThreshForOutlier * nanstd(values));
+                withinThreshMax = nanmean(values) + stdThreshForOutlier * nanstd(values);
+            end
+        end
         
         % Plot the within bounds points in blue
         withinThreshIdx = logical((values > withinThreshMin) .* (values < withinThreshMax));
