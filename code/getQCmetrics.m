@@ -27,7 +27,7 @@
 verbose = false; % By default, nothing reported to the console.
 stdThreshForOutlier = 3;
 jitterFactor = .25; % The amount of x-axis jitter in the column plots
-outputDirectory = '~/Desktop/';
+outputDirectory = './';
 closeFigures = true;
 
 
@@ -48,6 +48,8 @@ project = all_projects{contains(cellfun(@(p) {p.label}, all_projects), project_l
 %% For each session/acquisition/file find the QA reports and add them to QA
 
 QA = {};
+FilesAnalyzed = {};
+FilesAnalyzedId = {};
 
 % Get all of the sessions in the project
 project_sessions = fw.getProjectSessions(project.id);
@@ -83,8 +85,12 @@ for ss = 1:numel(project_sessions)
                 end
                 
                 % Only if we have the modality do we add the acquisition
+                % This file will be analyzed
                 if isfield(acq, 'modality')
                     session.acquisitions{end+1} = acq;
+                    FilesAnalyzed{end+1} = strcat(acq.label,'_mriqc.qa.html');
+                    FilesAnalyzedId{end+1} = acq_id;
+                    break;
                 end
             end
         end
@@ -248,6 +254,7 @@ for i = 1:length(mods)
                                 outliers.(mods{i}).(mets{j}).subject{iterator} = QA{NumQA}.subject;
                                 outliers.(mods{i}).(mets{j}).label{iterator} = QA{NumQA}.label;
                                 outliers.(mods{i}).(mets{j}).acquisition{iterator} = QA{NumQA}.acquisitions{NumAcq}.label;
+                                outliers.(mods{i}).(mets{j}).scores{iterator} = values(badNums);
                                 iterator = iterator + 1;
                             end
                         end
@@ -268,21 +275,39 @@ for i = 1:length(mods)
     end
 end
 
-% Output the outliers (if desired)
+%% Write outlier information to a file (and display, if desired)
+% Create the information that you want in table
+subject = {};
+session = {};
+acquisition = {};
+metric = {};
+score = {};
 modalities = fields(outliers);
 for modalityIdx = 1:length(modalities)
     metricNames = fields(outliers.(modalities{modalityIdx}));
     for metricIdx = 1:length(metricNames)
         for finalIdx = 1:length(outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).subject)
-                subject = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).subject{finalIdx};
-                session = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).label{finalIdx};
-                scan = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).acquisition{finalIdx};
-                finalDisplay = strcat('Metric:',metricNames{metricIdx},'\nSubject:',subject,'\nSession:',session,'\nScan:',scan,'\n\n');
-                fileID = fopen('~/Desktop/outliers.txt','a');
-                fprintf(fileID,finalDisplay);
-                if verbose
-                    fprintf(finalDisplay);
-                end
+                subject{end+1} = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).subject{finalIdx};
+                session{end+1} = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).label{finalIdx};
+                acquisition{end+1} = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).acquisition{finalIdx};
+                metric{end+1} = metricNames{metricIdx};
+                score{end+1} = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).scores{finalIdx};
         end
     end
 end
+outliersInfo = [subject;session;acquisition;metric;score].';
+T = cell2table(outliersInfo,'VariableNames',{'Subject','Session','Acquisition','Metric','Score'});
+OutliersFilename = fullfile(outputDirectory,'outliers.csv');
+writetable(T,OutliersFilename,'Delimiter',',','QuoteStrings',false);
+if verbose
+    T;
+end
+
+%% Write the output files to the project on Flywheel
+
+file_ref = struct('id', FilesAnalyzedId, 'type', 'acquisition', 'name', FilesAnalyzed);
+analysis = struct('label', 'Test', 'inputs', {{file_ref}});
+analysisId = fw.addProjectAnalysis(project.id, analysis);
+outputs = {strcat(outputDirectory,'T1w.pdf'), strcat(outputDirectory,'T2w.pdf'), strcat(outputDirectory,'bold.pdf'), strcat(outputDirectory,'outliers.csv')};
+fw.uploadOutputToAnalysis(analysisId, strcat(outputDirectory,outputs));
+delete strcat(outDirectory,'T1w.pdf') strcat(outDirectory,'T2w.pdf') strcat(outDirectory,'bold.pdf') strcat(outDirectory,'outliers.csv');
