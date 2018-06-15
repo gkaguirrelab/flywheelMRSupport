@@ -39,6 +39,23 @@ switch userID
 end
 
 
+%% Paths to store flywheel data and scratch space
+if ismac
+    % Code to run on Mac plaform
+    setpref(toolboxName,'flywheelScratchDir','/tmp/flywheel');
+    setpref(toolboxName,'flywheelRootDir',fullfile('/Users/',userID,'/Documents/flywheel'));
+elseif isunix
+    % Code to run on Linux plaform
+    setpref(toolboxName,'flywheelScratchDir','/tmp/flywheel');
+    setpref(toolboxName,'flywheelRootDir',fullfile('/home/',userID,'/Documents/flywheel'));
+elseif ispc
+    % Code to run on Windows platform
+    warning('No supported for PC')
+else
+    disp('What are you using?')
+end
+
+
 %% Paths to local applications needed to run this file
 if ismac
     % Code to run on Mac plaform
