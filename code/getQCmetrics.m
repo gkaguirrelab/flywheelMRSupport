@@ -88,7 +88,7 @@ for ss = 1:numel(project_sessions)
                 % This file will be analyzed
                 if isfield(acq, 'modality')
                     session.acquisitions{end+1} = acq;
-                    FilesAnalyzed{end+1} = strcat(acq.label,'_mriqc.qa.html');
+                    FilesAnalyzed{end+1} = files{ff}.name;
                     FilesAnalyzedId{end+1} = acq_id;
                     break;
                 end
@@ -107,15 +107,15 @@ end
 modalityLabels = {'T1w','T2w','bold'};
 % Metrics of interest are placed here
 metricLabels = {'cjv','cnr','efc','fber','wm2max','snr_csf','snr_gm','snr_wm';
-                'cjv','cnr','efc','fber','wm2max','snr_csf','snr_gm','snr_wm';
-                'fd_mean','dvars_std','fd_perc','gcor','tsnr','aor','gsr_x','gsr_y'};
+    'cjv','cnr','efc','fber','wm2max','snr_csf','snr_gm','snr_wm';
+    'fd_mean','dvars_std','fd_perc','gcor','tsnr','aor','gsr_x','gsr_y'};
 % What values are generally bad for the corresponding metric from
 % metricLabels (0 means high values are bad, 1 means low values are bad,
 % 2 means any extreme values are bad)
 metricRanges = {0,1,0,1,2,1,1,1;
-                0,1,0,1,2,1,1,1;
-                0,0,0,1,1,0,0,0};
-                
+    0,1,0,1,2,1,1,1;
+    0,0,0,1,1,0,0,0};
+
 metrics = [];
 dataLabels = [];
 
@@ -287,11 +287,11 @@ for modalityIdx = 1:length(modalities)
     metricNames = fields(outliers.(modalities{modalityIdx}));
     for metricIdx = 1:length(metricNames)
         for finalIdx = 1:length(outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).subject)
-                subject{end+1} = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).subject{finalIdx};
-                session{end+1} = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).label{finalIdx};
-                acquisition{end+1} = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).acquisition{finalIdx};
-                metric{end+1} = metricNames{metricIdx};
-                score{end+1} = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).scores{finalIdx};
+            subject{end+1} = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).subject{finalIdx};
+            session{end+1} = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).label{finalIdx};
+            acquisition{end+1} = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).acquisition{finalIdx};
+            metric{end+1} = metricNames{metricIdx};
+            score{end+1} = outliers.(modalities{modalityIdx}).(metricNames{metricIdx}).scores{finalIdx};
         end
     end
 end
@@ -304,10 +304,11 @@ if verbose
 end
 
 %% Write the output files to the project on Flywheel
-
+acquisitionArray = repmat({'acquisition'},[1 length(FilesAnalyzed)]);
 file_ref = struct('id', FilesAnalyzedId, 'type', 'acquisition', 'name', FilesAnalyzed);
-analysis = struct('label', 'Test', 'inputs', {{file_ref}});
+analysis = struct('label', 'testAnalysis', 'inputs', {{file_ref}});
 analysisId = fw.addProjectAnalysis(project.id, analysis);
 outputs = {strcat(outputDirectory,'T1w.pdf'), strcat(outputDirectory,'T2w.pdf'), strcat(outputDirectory,'bold.pdf'), strcat(outputDirectory,'outliers.csv')};
 fw.uploadOutputToAnalysis(analysisId, strcat(outputDirectory,outputs));
-delete strcat(outDirectory,'T1w.pdf') strcat(outDirectory,'T2w.pdf') strcat(outDirectory,'bold.pdf') strcat(outDirectory,'outliers.csv');
+cd(outputDirectory);
+delete T1w.pdf T2w.pdf bold.pdf outliers.csv;
