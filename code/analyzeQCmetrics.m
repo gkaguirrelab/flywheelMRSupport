@@ -33,7 +33,7 @@ function [] = analyzeQCmetrics(theProject,targetProjectField,varargin)
 %
 % Examples:
 %{
-    getQCMetrics
+    getQCMetrics('tome','files')
 %}
 
 
@@ -312,7 +312,7 @@ for i = 1:length(mods)
     end
     
     % Save the figure as a PDF within the output directory
-    filenameOut = fullfile(outputDirectory,[mods{i} '.pdf']);
+    filenameOut = fullfile(outputDirectory,['mriqcSummary_' mods{i} '.pdf']);
     saveas(hFigure,filenameOut);
     
     % Close figure handle
@@ -358,18 +358,18 @@ switch targetProjectField
         end
         analysis = struct('label', 'testAnalysis', 'inputs', {file_ref});
         analysisId = fw.addProjectAnalysis(project.id, analysis);
-        fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/T1w.pdf');
-        fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/T2w.pdf');
-        fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/bold.pdf');
+        fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/mriqcSummary_T1w.pdf');
+        fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/mriqcSummary_T2w.pdf');
+        fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/mriqcSummary_bold.pdf');
         fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/outliers.csv');
-        delete T1w.pdf T2w.pdf bold.pdf outliers.csv;
+        delete mriqcSummary_T1w.pdf mriqcSummary_T2w.pdf mriqcSummary_bold.pdf outliers.csv;
     case 'files'
         cd(outputDirectory);
-        outputs = {'./T1w.pdf', './T2w.pdf', './bold.pdf', './outliers.csv'};
+        outputs = {'./mriqcSummary_T1w.pdf', './mriqcSummary_T2w.pdf', './mriqcSummary_bold.pdf', './outliers.csv'};
         for ff = 1:length(outputs)
             fw.uploadFileToProject(project.id, outputs{ff});
         end
-        delete T1w.pdf T2w.pdf bold.pdf outliers.csv;
+        delete mriqcSummary_T1w.pdf mriqcSummary_T2w.pdf mriqcSummary_bold.pdf outliers.csv;
     otherwise
         error('Error. Target project field must be either "analyses" or "files".');
 end
