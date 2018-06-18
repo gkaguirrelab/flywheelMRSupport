@@ -359,10 +359,6 @@ switch targetProjectField
         analysis = struct('label', 'testAnalysis', 'inputs', {file_ref});
         analysisId = fw.addProjectAnalysis(project.id, analysis);
         outputs = {strcat(outputDirectory,'/mriqcSummary_T1w.pdf'), strcat(outputDirectory,'./mriqcSummary_T2w.pdf'), strcat(outputDirectory,'./mriqcSummary_bold.pdf'), strcat(outputDirectory,'./mriqcOutliersBySession.csv')};
-        fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/mriqcSummary_T1w.pdf');
-        fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/mriqcSummary_T2w.pdf');
-        fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/mriqcSummary_bold.pdf');
-        fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/mriqcOutliersBySession.csv');
         for outputFiles = 1:length(outputs)
             fw.uploadOutputToAnalysis(analysisId, outputs{outputFiles});
         end
