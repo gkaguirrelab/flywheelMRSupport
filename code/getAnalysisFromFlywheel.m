@@ -143,36 +143,36 @@ if (~p.Results.nodownload)
 end
 
 %% Set-up search structure and search
-searchStruct = struct('return_type', 'file', ...
+searchStruct = struct('returnType', 'file', ...
     'filters', {{struct('term', ...
     struct('analysis0x2elabel', analysisLabel))}});
 results = fw.search(searchStruct);
 
 % Grab ids from first result. 
-analysis_id = results(1).analysis.x_id;
-session_id = results(1).session.x_id;
-subject = results(1).subject.code;
+analysis_id = results{1}.analysis.id;
+session_id = results{1}.session.id;
+subject = results{1}.subject.code;
 
 % This next
 if (~p.Results.nodownload)
     [~,cmdout] = unixFind(analysis_id, p.Results.searchDir, 'searchCase', 'wildcard');
     if ~isempty(cmdout)
-        warning('flywheelMRSupport:analysisAlreadyPresent','WARNING: File found in search containing the analysis id: %s \n',results(1).analysis.x_id);
+        warning('flywheelMRSupport:analysisAlreadyPresent','WARNING: File found in search containing the analysis id: %s \n',results{1}.analysis.id);
     else
         % Iterate over results and download the files
         for ii = 1:numel(results)
-            file_name = results(ii).file.name;
+            file_name = results{ii}.file.name;
             output_name = fullfile(dataDownloadDir, file_name);
             
             % Check that our assumptions about what can change with
             % iteration are met.
-            if (~strcmp(session_id,results(ii).session.x_id))
+            if (~strcmp(session_id,results{ii}.session.id))
                 error('Session number changed with iteration');
             end
-            if (~strcmp(analysis_id,results(ii).analysis.x_id))
+            if (~strcmp(analysis_id,results{ii}.analysis.id))
                 error('Analysis id changed with iteration');
             end
-            if (~strcnp(subject,results(ii).subject.code))
+            if (~strcmp(subject,results{ii}.subject.code))
             	error('Subject code changed with iteration');
             end
             
@@ -181,7 +181,7 @@ if (~p.Results.nodownload)
                 fprintf('Downloading %dMB file: %s ... \n', round(results(ii).file.size / 1000000), file_name);
                 tic
             end
-            fw.downloadFileFromAnalysis(session_id, analysis_id, file_name, output_name);
+            fw.downloadOutputFromAnalysis(analysis_id, file_name,dataDownloadDir)
             if p.Results.verbose
                 toc
             end
@@ -209,8 +209,8 @@ end
 fwInfo.session_id    = session_id;
 fwInfo.analysis_id   = analysis_id;
 fwInfo.subject       = subject;
-fwInfo.label         = results(1).session.label;
-fwInfo.timestamp     = results(1).session.timestamp;
+fwInfo.label         = results{1}.session.label;
+fwInfo.timestamp     = results{1}.session.timestamp;
 fwInfo.project_id    = project_id;
 fwInfo.theProject    = theProject;
 fwInfo.analysisLabel = analysisLabel;
