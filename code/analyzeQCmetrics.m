@@ -33,7 +33,7 @@ function [] = analyzeQCmetrics(theProject,targetProjectField,varargin)
 %
 % Examples:
 %{
-    getQCMetrics('tome','files')
+    analyzeQCmetrics('tome','files')
 %}
 
 
@@ -41,9 +41,11 @@ function [] = analyzeQCmetrics(theProject,targetProjectField,varargin)
 p = inputParser; p.KeepUnmatched = false;
 p.addRequired('theProject', @ischar);
 p.addRequired('targetProjectField', @ischar);
+
 p.addParameter('verbose',false, @islogical);
 p.addParameter('stdThreshForOutlier',3, @isnumeric);
 p.addParameter('jitterFactor',0.25, @isnumeric);
+
 p.parse(theProject, targetProjectField, varargin{:})
 
 % Distribute the parameters into variables
