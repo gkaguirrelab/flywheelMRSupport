@@ -180,7 +180,7 @@ mods = fieldnames(metrics);
 for i = 1:length(mods)
     
     % Create a figure to hold the plots for this modality
-    hFigure = figure('NumberTitle', 'off', 'Name', mods{i});
+    hFigure = figure('NumberTitle', 'off', 'Name', ['MRIQC Metrics - ' mods{i}]);
     
     %Get all the metrics in the modality
     mets = fieldnames(metrics.(mods{i}));
@@ -343,7 +343,7 @@ for modalityIdx = 1:length(modalities)
 end
 outliersInfo = [subject;session;acquisition;metric;score;stdsaway].';
 T = cell2table(outliersInfo,'VariableNames',{'Subject','Session','Acquisition','Metric','Score','StandardDeviations'});
-OutliersFilename = fullfile(outputDirectory,'outliers.csv');
+OutliersFilename = fullfile(outputDirectory,'mriqcOutliersBySession.csv');
 writetable(T,OutliersFilename,'Delimiter',',','QuoteStrings',false);
 if verbose
     T;
@@ -358,18 +358,23 @@ switch targetProjectField
         end
         analysis = struct('label', 'testAnalysis', 'inputs', {file_ref});
         analysisId = fw.addProjectAnalysis(project.id, analysis);
+        outputs = {strcat(outputDirectory,'/mriqcSummary_T1w.pdf'), strcat(outputDirectory,'./mriqcSummary_T2w.pdf'), strcat(outputDirectory,'./mriqcSummary_bold.pdf'), strcat(outputDirectory,'./mriqcOutliersBySession.csv')};
         fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/mriqcSummary_T1w.pdf');
         fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/mriqcSummary_T2w.pdf');
         fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/mriqcSummary_bold.pdf');
-        fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/outliers.csv');
-        delete mriqcSummary_T1w.pdf mriqcSummary_T2w.pdf mriqcSummary_bold.pdf outliers.csv;
+        fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/mriqcOutliersBySession.csv');
+        for outputFiles = 1:length(outputs)
+            fw.uploadOutputToAnalysis(analysisId, outputs{outputFiles});
+        end
+        cd(outputDirectory);
+        delete mriqcSummary_T1w.pdf mriqcSummary_T2w.pdf mriqcSummary_bold.pdf mriqcOutliersBySession.csv;
     case 'files'
         cd(outputDirectory);
-        outputs = {'./mriqcSummary_T1w.pdf', './mriqcSummary_T2w.pdf', './mriqcSummary_bold.pdf', './outliers.csv'};
+        outputs = {'./mriqcSummary_T1w.pdf', './mriqcSummary_T2w.pdf', './mriqcSummary_bold.pdf', './mriqcOutliersBySession.csv'};
         for ff = 1:length(outputs)
             fw.uploadFileToProject(project.id, outputs{ff});
         end
-        delete mriqcSummary_T1w.pdf mriqcSummary_T2w.pdf mriqcSummary_bold.pdf outliers.csv;
+        delete mriqcSummary_T1w.pdf mriqcSummary_T2w.pdf mriqcSummary_bold.pdf mriqcOutliersBySession.csv;
     otherwise
         error('Error. Target project field must be either "analyses" or "files".');
 end
