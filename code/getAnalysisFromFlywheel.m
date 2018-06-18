@@ -181,7 +181,7 @@ if (~p.Results.nodownload)
                 fprintf('Downloading %dMB file: %s ... \n', round(results(ii).file.size / 1000000), file_name);
                 tic
             end
-            fw.downloadOutputFromAnalysis(analysis_id, file_name,dataDownloadDir)
+            fw.downloadOutputFromAnalysis(analysis_id, file_name, fullfile(dataDownloadDir, file_name))
             if p.Results.verbose
                 toc
             end
