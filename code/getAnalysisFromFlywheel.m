@@ -72,7 +72,7 @@ p.parse(theProject, analysisLabel, dataDownloadDir, varargin{:})
 
 
 %% Open flywheel object
-fw = Flywheel(getpref('flywheelMRSupport','flywheelAPIKey'));
+fw = flywheel.Flywheel(getpref('flywheelMRSupport','flywheelAPIKey'));
 
 %% Find out who we are
 me = fw.getCurrentUser();

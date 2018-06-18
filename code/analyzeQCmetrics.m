@@ -18,7 +18,7 @@ function [] = analyzeQCmetrics(theProject,targetProjectField,varargin)
 %   targetProjectField      - Define the target location of the output
 %                             files for this analysis. You may specify
 %                             either "analyses" or "files".
-%                            
+%
 % Outputs:
 %   none
 %
@@ -99,27 +99,27 @@ for ss = 1:numel(project_sessions)
         for ff = 1:length(files)
             if strcmpi(files{ff}.type, 'qa')
                 iterator = iterator + 1;
-                end
-                acq = [];
-                acq.label = acq_label;
-                acq.info = fw.getAcquisitionFileInfo(acq_id, files{ff}.name).info.struct;
-                
-                % Get the acquisition modality
-                if isfield(acq.info, 'metadata')
-                    acq.modality = acq.info.metadata.modality;
-                end
-                if isfield(acq.info, 'bids_meta')
-                    acq.modality = acq.info.bids_meta.modality;
-                end
-                
-                % Only if we have the modality do we add the acquisition
-                % This file will be analyzed
-                if isfield(acq, 'modality')
-                    session.acquisitions{end+1} = acq;
-                    FilesAnalyzed{end+1} = files{ff}.name;
-                    FilesAnalyzedId{end+1} = acq_id;
-                    if iterator == 3
-                        message = strcat('Acquisition',32,acq_label,32,'in ',32,session.label,32,'for Subject',32,project_sessions{ss}.subject.code,32,'has duplicate QC files.');
+            end
+            acq = [];
+            acq.label = acq_label;
+            acq.info = fw.getAcquisitionFileInfo(acq_id, files{ff}.name).info.struct;
+            
+            % Get the acquisition modality
+            if isfield(acq.info, 'metadata')
+                acq.modality = acq.info.metadata.modality;
+            end
+            if isfield(acq.info, 'bids_meta')
+                acq.modality = acq.info.bids_meta.modality;
+            end
+            
+            % Only if we have the modality do we add the acquisition
+            % This file will be analyzed
+            if isfield(acq, 'modality')
+                session.acquisitions{end+1} = acq;
+                FilesAnalyzed{end+1} = files{ff}.name;
+                FilesAnalyzedId{end+1} = acq_id;
+                if iterator == 3
+                    message = strcat('Acquisition',32,acq_label,32,'in ',32,session.label,32,'for Subject',32,project_sessions{ss}.subject.code,32,'has duplicate QC files.');
                     warning(message);
                 end
             end
@@ -239,7 +239,7 @@ for i = 1:length(mods)
         % Place the created axis in the correct position in the figure;
         % each iteration (different metric) gets a different plot in the figure
         sbplt = subplot(3,3,iter,axis);
-        if range == 0 
+        if range == 0
             xDim = [sbplt.Position(1)+sbplt.Position(3) sbplt.Position(1)+sbplt.Position(3)];
             yDim = [sbplt.Position(2) sbplt.Position(2)+sbplt.Position(4)];
             annotation('textarrow',xDim,yDim,'String','Bad')
@@ -358,14 +358,8 @@ switch targetProjectField
         end
         analysis = struct('label', 'testAnalysis', 'inputs', {file_ref});
         analysisId = fw.addProjectAnalysis(project.id, analysis);
-        outputs = {strcat(outputDirectory,'/mriqcSummary_T1w.pdf'), strcat(outputDirectory,'./mriqcSummary_T2w.pdf'), strcat(outputDirectory,'./mriqcSummary_bold.pdf'), strcat(outputDirectory,'./mriqcOutliersBySession.csv')};
-        fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/mriqcSummary_T1w.pdf');
-        fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/mriqcSummary_T2w.pdf');
-        fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/mriqcSummary_bold.pdf');
-        fw.uploadOutputToAnalysis(analysisId, '/private/tmp/flywheel/mriqcOutliersBySession.csv');
-        for outputFiles = 1:length(outputs)
-            fw.uploadOutputToAnalysis(analysisId, outputs{outputFiles});
-        end
+        outputs = {fullfile(outputDirectory,'mriqcSummary_T1w.pdf'), fullfile(outputDirectory,'mriqcSummary_T2w.pdf'), fullfile(outputDirectory,'mriqcSummary_bold.pdf'), fullfile(outputDirectory,'mriqcOutliersBySession.csv')};
+        fw.uploadOutputToAnalysis(analysisId, outputs);
         cd(outputDirectory);
         delete mriqcSummary_T1w.pdf mriqcSummary_T2w.pdf mriqcSummary_bold.pdf mriqcOutliersBySession.csv;
     case 'files'
