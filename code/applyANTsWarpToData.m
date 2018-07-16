@@ -41,7 +41,7 @@ p.addParameter('verbose',1,@isnumeric);
 p.addParameter('dimensions',3,@isnumeric);
 p.parse(varargin{:});
 
-%% Generaate antsApplyTransform command 
+%% Generate antsApplyTransform command A
 cmd = [fullfile(getpref('flywheelMRSupport','binANTS'),'antsApplyTransforms') ' -d ' num2str(p.Results.dimensions) ' -o ' outFile ' -v ' num2str(p.Results.verbose) ' -t ' ...
         warpFile ' -i ' inFile ' -r ' refFile];
     
