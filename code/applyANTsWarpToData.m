@@ -1,5 +1,5 @@
 function [] = applyANTsWarpToData(inFile, outFile, warpFile, refFile, varargin)
-% applyANTsWarpToData -- Apply the ANTs registration file from frmiprep to the output of the benson atlas.
+% Apply ANTs registration from frmiprep to the output of the Benson atlas.
 %
 %   Details: This function uses the ANTS command line tools to call
 %            antsApplyTransforms which will warp/register a nifti volume
