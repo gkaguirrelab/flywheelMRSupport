@@ -1,4 +1,4 @@
-function [ output_args ] = volumeToSurface( input_args )
+function [ output_args ] = volumeToSurface( input1, input2 )
 % Geneartes a cortical surface map from a nifti volume
 %
 % Description:
@@ -14,6 +14,12 @@ function [ output_args ] = volumeToSurface( input_args )
 %
 % Examples:
 %{
+    a = 1;
+    b = 2;
+    a = 1+2
+    niftiInputPath = '/Users/nikhil/whatever'
+    surfOutputPath = '/Users/nkhil/whatever'
+    volumeToSurface( input_args );
 %}
 
 %% FUNCTION GOES HERE
