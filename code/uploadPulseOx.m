@@ -38,15 +38,17 @@ p.addRequired('subjectName', @ischar);
 p.addRequired('sessionName', @ischar);
 p.addRequired('pulseOxLocation', @ischar);
 
+% Optional key/value pairs
+p.addParameter('availableSessionNames',{'Session 1','Session 2'}, @iscell);
+p.addParameter('sessionPaths',{'/session1_restAndStructure/','/session2_spatialStimuli/'}, @iscell);
 p.addParameter('verbose',false, @islogical);
 
+% parse
 p.parse(projectName, subjectName, sessionName, pulseOxLocation, varargin{:})
 
-projectName = p.Results.projectName;
-subjectName = p.Results.subjectName;
-sessionName = p.Results.sessionName;
-pulseOxLocation = p.Results.pulseOxLocation;
+% Unpack p.Results
 verbose = p.Results.verbose;
+
 
 %% Instantiate Flywheel object
 
