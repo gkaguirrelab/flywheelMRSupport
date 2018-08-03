@@ -166,7 +166,7 @@ for session = 1:numel(allSessions)
                     pulseFile = strcat(pulseFiles(jj).folder,'/',pulseFiles(jj).name);
                     try
                         PulseResp(dcmDir,pulseFile,strcat(scratchDir,'/dicomFiles/pulseOutput'),'verbose',verbose);
-                        % fw.uploadFileToAcquisition(acqIDs{file},fullfile(pulseFiles(file).folder,pulseFiles(file).name));
+                        fw.uploadFileToAcquisition(sortedIDs{file},pulseFile);
                         break;
                     catch
                         if file == length(pulseFiles)
