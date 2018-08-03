@@ -215,10 +215,9 @@ if ~isempty(sortedIDs)
                 
                 % Special case, some files are unzipped differently. This fixes that bug. 
                 if contains(dcmFile,'.dicom')
-                    dirs = dir(dcmDir);
-                    extraDirName = dirs(3).name;
-                    extraDir = fullfile(dirs(3).folder,extraDirName);
-                    movefile(fullfile(extraDir,'*'),dcmDir);
+                    [~,extraDirName,~] = fileparts(dcmFile);
+                    extraDir = fullfile(dcmDir,extraDirName);
+                    movefile(fullfile(extraDir,'*.dcm'),dcmDir);
                     rmdir(extraDir);
                 end
             end
@@ -254,15 +253,9 @@ if ~isempty(sortedIDs)
         end
         
         % Cleaning up the dicom directory by deleting all files inside it
-        testDir = dir(dcmDir);
-        if ~testDir(3).isdir
-            allDcmFiles = fullfile(dcmDir,'/*');
-            delete(allDcmFiles);
-        else
-            allDcmFiles = strcat(dcmDir,'/',testDir(3).name,'/*');
-            delete(allDcmFiles);
-            rmdir(fullfile(dcmDir,testDir(3).name));
-        end
+        allDcmFiles = strcat(dcmDir,'/*.dcm');
+        delete(allDcmFiles);
+
         
         % Delete the dicom directory.
         rmdir(dcmDir);
