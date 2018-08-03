@@ -25,6 +25,13 @@ function uploadAllPulseOx(projectName, pulseOxLocation,varargin)
 % Optional key/value pairs:
 %   'verbose'                - Logical, default false
 %
+%   'availableSessionNames'  - Cell array with possible session names with
+%                              acquisitions that may have PulseOx data.
+%
+%   'sessionPaths'           - Cell array that corresponds to
+%                              availableSessionNames and is the filePath to
+%                              the location of the PulseOx data.
+%
 % Examples:
 %{
     uploadAllPulseOx('tome','~/Dropbox (Aguirre-Brainard Lab)/TOME_data')
@@ -36,13 +43,15 @@ p = inputParser; p.KeepUnmatched = false;
 p.addRequired('projectName', @ischar);
 p.addRequired('pulseOxLocation', @ischar);
 
+p.addParameter('availableSessionNames',{'Session 1','Session 2'}, @iscell);
+p.addParameter('sessionPaths',{'/session1_restAndStructure/','/session2_spatialStimuli/'}, @iscell);
 p.addParameter('verbose',false, @islogical);
 
 p.parse(projectName, pulseOxLocation, varargin{:})
 
-projectName = p.Results.projectName;
-pulseOxLocation = p.Results.pulseOxLocation;
 verbose = p.Results.verbose;
+availableSessionNames = p.Results.availableSessionNames;
+sessionPaths = p.Results.sessionPaths;
 
 %% Instantiate Flywheel object
 
@@ -59,10 +68,8 @@ end
 allSessions = fw.getProjectSessions(projID);
 
 % Get acquisitions for each session
-session1Bad = {};
-session2Bad = {};
 for session = 1:numel(allSessions)
-    if strcmp(allSessions{session}.label,'Session 1') || strcmp(allSessions{session}.label,'Session 2')
+    if contains(allSessions{session}.label,availableSessionNames)
         sesID = allSessions{session}.id;
         allAcqs = fw.getSessionAcquisitions(sesID);
         % Instantiate arrays
@@ -90,18 +97,13 @@ for session = 1:numel(allSessions)
                 sortedIDs{ii} = acqIDs{ind(ii)};
             end
             
-            % Check for Session 1
-            if strcmp(allSessions{session}.label,'Session 1')
-                % Find the Subject Directory
-                subjDir = strcat(pulseOxLocation,'/session1_restAndStructure/',allSessions{session}.subject.code);
-                folders = dir(subjDir);
-            end
-            
-            % Check for Session 2
-            if strcmp(allSessions{session}.label,'Session 2')
-                % Find the Subject Directory
-                subjDir = strcat(pulseOxLocation,'/session2_spatialStimuli/',allSessions{session}.subject.code);
-                folders = dir(subjDir);
+            % Find the right subject/session directory
+            for ssn = 1:length(availableSessionNames)
+                if strcmp(allSessions{session}.label,availableSessionNames{ssn})
+                    % Find the Subject Directory
+                    subjDir = fullfile(pulseOxLocation,sessionPaths{ssn},allSessions{session}.subject.code);
+                    folders = dir(subjDir);
+                end
             end
             
             % Match Session Folder to Flywheel Session
@@ -114,19 +116,12 @@ for session = 1:numel(allSessions)
                 end
             end
             
+            % Find all the PulseOx files for this session
             pulseDir = fullfile(subjDir, sesDir.name,'ScannerFiles','PulseOx');
             allPulseFiles = dir(fullfile(pulseDir));
             pulseFiles = allPulseFiles(3:end);
             
-            if length(pulseFiles) ~= length(acqTimes)
-                warning(['Subject ' allSessions{session}.subject.code ' for ' allSessions{session}.label ' has an unequal number of puls.log files. ']);
-                if strcmp(allSessions{session}.label,'Session 2')
-                    session2Bad{end+1} = [allSessions{session}.subject.code ' -- ' dateString];
-                else
-                    session1Bad{end+1} = [allSessions{session}.subject.code ' -- ' dateString];
-                end
-            end
-            
+            % Get the current acquisition and check for existing PulseOx log files
             for file = 1:length(sortedIDs)
                 acqToUpload = fw.getAcquisition(sortedIDs{file});
                 acqToUploadFiles = acqToUpload.files;
@@ -137,47 +132,106 @@ for session = 1:numel(allSessions)
                     end
                 end
                 
+                % Warning if log files already exist.
                 if logExists
-                    warning(['Subject ' allSessions{session}.subject.code ' for ' allSessions{session}.label ' for Acquisition ' acqToUpload.label ' already has PulseOx files on Flywheel.']);
+                    warning('This session already has PulseOx files on Flywheel.');
                 end
             end
             
+            % Create the directory to store the dicom files.
             scratchDir = getpref('flywheelMRSupport','flywheelScratchDir');
             if ~exist(fullfile(scratchDir,'dicomFiles'))
                 mkdir(fullfile(scratchDir,'dicomFiles'));
             end
             
+            % Create a directory to store output of PulseResp (comparing dicoms and
+            % PulseOx log files).
+            if ~exist(fullfile(scratchDir,'dicomFiles/pulseOutput'))
+                mkdir(fullfile(scratchDir,'dicomFiles/pulseOutput'));
+            end
+            
+            % Instantiate outputs
+            pulseOxMatches = strings(length(sortedIDs),2);
+            allMatched = true;
+            
+            % Find the dicom files and download them to the dicom directory.
             for file = 1:length(sortedIDs)
                 acqToUpload = fw.getAcquisition(sortedIDs{file});
+                pulseOxMatches(file,1) = acqToUpload.label;
                 acqToUploadFiles = acqToUpload.files;
                 for fff = 1:length(acqToUploadFiles)
+                    
+                    % Finding the dicom file
                     if strcmp(acqToUploadFiles{fff}.type,'dicom')
-                        disp(acqToUploadFiles{fff}.name);
+                        if verbose
+                            disp(acqToUploadFiles{fff}.name);
+                        end
                         dcmFile = strcat(scratchDir,'/dicomFiles/',acqToUploadFiles{fff}.name);
+                        
+                        % Downloading the file
                         if ~exist(dcmFile)
                             dcmFile = fw.downloadFileFromAcquisition(acqToUpload.id,acqToUploadFiles{fff}.name,dcmFile);
                         end
                         dcmDir = strcat(scratchDir,'/dicomFiles/dicomDir');
+                        
+                        % Unzip the file
                         unzip(dcmFile,dcmDir);
-                    end
-                end
-                
-                for jj = 1:length(pulseFiles)
-                    pulseFile = strcat(pulseFiles(jj).folder,'/',pulseFiles(jj).name);
-                    try
-                        PulseResp(dcmDir,pulseFile,strcat(scratchDir,'/dicomFiles/pulseOutput'),'verbose',verbose);
-                        fw.uploadFileToAcquisition(sortedIDs{file},pulseFile);
-                        break;
-                    catch
-                        if file == length(pulseFiles)
-                            warning(['Acquisition ' acqToUpload.label ' for Subject ' allSessions{session}.subject.code ' Session ' allSessions{session}.label ' has no compatible PulseOx files']);
+                        
+                        % Special case, some files are unzipped differently. This fixes that bug.
+                        if contains(dcmFile,'.dicom')
+                            dirs = dir(dcmDir);
+                            extraDirName = dirs(3).name;
+                            extraDir = fullfile(dirs(3).folder,extraDirName);
+                            movefile(fullfile(extraDir,'*'),dcmDir);
+                            rmdir(extraDir);
                         end
                     end
                 end
                 
-                allDcmFiles = fullfile(dcmDir,'/*');
-                delete(allDcmFiles);
+                % Go through the PulseOx files and compare them to the dicoms.
+                for jj = 1:length(pulseFiles)
+                    pulseFile = strcat(pulseFiles(jj).folder,'/',pulseFiles(jj).name);
+                    try
+                        % Compare the dicoms and the log file
+                        PulseResp(dcmDir,pulseFile,strcat(scratchDir,'/dicomFiles/pulseOutput'),'verbose',verbose);
+                        if verbose
+                            disp('this works.');
+                        end
+                        % If they are matched, upload the log file to Flywheel
+                        % fw.uploadFileToAcquisition(sortedIDs{file},pulseFile);
+                        
+                        % Matching the PulseOx file to the corresponding
+                        % acquisition
+                        pulseOxMatches(file,2) = pulseFiles(jj).name;
+                        break;
+                    catch
+                        if verbose
+                            disp('this does not work.');
+                        end
+                        
+                        % Warning if no log files match this acquisition
+                        if jj == length(pulseFiles)
+                            warning(['Aquisition ' acqToUpload.label ' has no compatible PulseOx files']);
+                            allMatched = false;
+                        end
+                    end
+                end
+                
+                % Cleaning up the dicom directory by deleting all files inside it
+                testDir = dir(dcmDir);
+                if ~testDir(3).isdir
+                    allDcmFiles = fullfile(dcmDir,'/*');
+                    delete(allDcmFiles);
+                else
+                    allDcmFiles = strcat(dcmDir,'/',testDir(3).name,'/*');
+                    delete(allDcmFiles);
+                    rmdir(fullfile(dcmDir,testDir(3).name));
+                end
+                
+                % Delete the dicom directory.
                 rmdir(dcmDir);
+                
+                % Delete the zipped dicom file.
                 delete(dcmFile);
                 
             end
