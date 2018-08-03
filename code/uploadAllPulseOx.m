@@ -11,7 +11,7 @@ function uploadAllPulseOx(projectName, pulseOxLocation,varargin)
 %
 % Inputs:
 %   projectName             - Define the project. This is the project you
-%                             are interested in uploading PulseOx files to 
+%                             are interested in uploading PulseOx files to
 %                             its acquisitions.
 %   pulseOxLocation         - This is the location of the PulseOx files you
 %                             want to upload. These files must be organized
@@ -96,14 +96,14 @@ for session = 1:numel(allSessions)
                 subjDir = strcat(pulseOxLocation,'/session1_restAndStructure/',allSessions{session}.subject.code);
                 folders = dir(subjDir);
             end
-                
+            
             % Check for Session 2
             if strcmp(allSessions{session}.label,'Session 2')
                 % Find the Subject Directory
                 subjDir = strcat(pulseOxLocation,'/session2_spatialStimuli/',allSessions{session}.subject.code);
                 folders = dir(subjDir);
             end
-
+            
             % Match Session Folder to Flywheel Session
             formatOut = 'mmddyy';
             dateString = datestr(acqTimes(1),formatOut);
@@ -113,11 +113,11 @@ for session = 1:numel(allSessions)
                     break;
                 end
             end
-
+            
             pulseDir = fullfile(subjDir, sesDir.name,'ScannerFiles','PulseOx');
             allPulseFiles = dir(fullfile(pulseDir));
             pulseFiles = allPulseFiles(3:end);
-
+            
             if length(pulseFiles) ~= length(acqTimes)
                 warning(['Subject ' allSessions{session}.subject.code ' for ' allSessions{session}.label ' has an unequal number of puls.log files. ']);
                 if strcmp(allSessions{session}.label,'Session 2')
@@ -136,9 +136,9 @@ for session = 1:numel(allSessions)
                         logExists = true;
                     end
                 end
-
+                
                 if logExists
-                    warning(['Subject ' allSessions{session}.subject.code ' for Session 2 for Acquisition ' acqToUpload.label ' already has PulseOx files on Flywheel.']);
+                    warning(['Subject ' allSessions{session}.subject.code ' for ' allSessions{session}.label ' for Acquisition ' acqToUpload.label ' already has PulseOx files on Flywheel.']);
                 end
             end
             
@@ -170,7 +170,7 @@ for session = 1:numel(allSessions)
                         break;
                     catch
                         if file == length(pulseFiles)
-                            warning('This acquisition has no compatible PulseOx files');
+                            warning(['Acquisition ' acqToUpload.label ' for Subject ' allSessions{session}.subject.code ' Session ' allSessions{session}.label ' has no compatible PulseOx files']);
                         end
                     end
                 end
