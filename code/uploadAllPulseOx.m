@@ -34,7 +34,7 @@ function uploadAllPulseOx(projectName, pulseOxLocation,varargin)
 %
 % Examples:
 %{
-    uploadAllPulseOx('tome','~/Dropbox (Aguirre-Brainard Lab)/TOME_data')
+    uploadAllPulseOx('tome','~/Dropbox (Aguirre-Brainard Lab)/TOME_data','verbose',true)
 %}
 
 
