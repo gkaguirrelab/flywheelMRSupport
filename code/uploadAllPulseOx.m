@@ -58,6 +58,7 @@ sessionPaths = p.Results.sessionPaths;
 fw = flywheel.Flywheel(getpref('flywheelMRSupport','flywheelAPIKey'));
 
 %% Get project ID and sessions
+
 allProjects = fw.getAllProjects;
 for proj = 1:numel(allProjects)
     if strcmp(allProjects{proj}.label,projectName)
@@ -65,7 +66,13 @@ for proj = 1:numel(allProjects)
     end
 end
 
+if verbose
+    disp(['Uploading pulse ox from project ' projectName ' to Flywheel.']);
+    disp(['Start time: ' char(datetime('now'))]);
+end
+
 allSessions = fw.getProjectSessions(projID);
+scratchDir = getpref('flywheelMRSupport','flywheelScratchDir');
 
 % Get acquisitions for each session
 for session = 1:numel(allSessions)
@@ -100,6 +107,9 @@ for session = 1:numel(allSessions)
             % Find the right subject/session directory
             for ssn = 1:length(availableSessionNames)
                 if strcmp(allSessions{session}.label,availableSessionNames{ssn})
+                    if verbose
+                    disp([allSessions{session}.subject.code ' - ' availableSessionNames{ssn}]);
+                    end
                     % Find the Subject Directory
                     subjDir = fullfile(pulseOxLocation,sessionPaths{ssn},allSessions{session}.subject.code);
                     folders = dir(subjDir);
@@ -134,20 +144,23 @@ for session = 1:numel(allSessions)
                 
                 % Warning if log files already exist.
                 if logExists
-                    warning('This session already has PulseOx files on Flywheel.');
+                    if verbose
+                        fprintf([acqToUpload.label ' - Pulse ox file already uploaded to flywheel. \nSkipping']);
+                    end
                 end
             end
             
             % Create the directory to store the dicom files.
-            scratchDir = getpref('flywheelMRSupport','flywheelScratchDir');
-            if ~exist(fullfile(scratchDir,'dicomFiles'))
-                mkdir(fullfile(scratchDir,'dicomFiles'));
+            fullDicomPath = fullfile(scratchDir,['dicomFiles-' allSessions{session}.subject.code '-' allSessions{session}.label]);
+            if ~exist(fullfile(scratchDir,['dicomFiles-' allSessions{session}.subject.code '-' allSessions{session}.label]))
+                mkdir(fullfile(scratchDir,['dicomFiles-' allSessions{session}.subject.code '-' allSessions{session}.label]));
             end
             
             % Create a directory to store output of PulseResp (comparing dicoms and
             % PulseOx log files).
-            if ~exist(fullfile(scratchDir,'dicomFiles/pulseOutput'))
-                mkdir(fullfile(scratchDir,'dicomFiles/pulseOutput'));
+            pulsePath = fullfile(fullDicomPath,['pulseOutput-' acqToUpload.label]);
+            if ~exist(fullfile(fullDicomPath,['pulseOutput-' acqToUpload.label]))
+                mkdir(fullfile(fullDicomPath,['pulseOutput-' acqToUpload.label]));  
             end
             
             % Instantiate outputs
@@ -163,16 +176,13 @@ for session = 1:numel(allSessions)
                     
                     % Finding the dicom file
                     if strcmp(acqToUploadFiles{fff}.type,'dicom')
-                        if verbose
-                            disp(acqToUploadFiles{fff}.name);
-                        end
-                        dcmFile = strcat(scratchDir,'/dicomFiles/',acqToUploadFiles{fff}.name);
+                        dcmFile = strcat(fullDicomPath,'/',acqToUploadFiles{fff}.name);
                         
                         % Downloading the file
                         if ~exist(dcmFile)
                             dcmFile = fw.downloadFileFromAcquisition(acqToUpload.id,acqToUploadFiles{fff}.name,dcmFile);
                         end
-                        dcmDir = strcat(scratchDir,'/dicomFiles/dicomDir');
+                        dcmDir = strcat(fullDicomPath,['/dicomDir-' acqToUpload.label]);
                         
                         % Unzip the file
                         unzip(dcmFile,dcmDir);
@@ -193,25 +203,26 @@ for session = 1:numel(allSessions)
                     pulseFile = strcat(pulseFiles(jj).folder,'/',pulseFiles(jj).name);
                     try
                         % Compare the dicoms and the log file
-                        PulseResp(dcmDir,pulseFile,strcat(scratchDir,'/dicomFiles/pulseOutput'),'verbose',verbose);
+                        PulseResp(dcmDir,pulseFile,pulsePath,'verbose',verbose);
                         if verbose
-                            disp('this works.');
+                            fprintf(['\t' jj '. ' acqToUpload.label ' - \n' pulseFile '\n']);
                         end
                         % If they are matched, upload the log file to Flywheel
-                        % fw.uploadFileToAcquisition(sortedIDs{file},pulseFile);
+                        %fw.uploadFileToAcquisition(sortedIDs{file},pulseFile);
+                        newMatFile = fullfile(pulsePath,[char(datetime('now')) '.mat']);
+                        movefile(fullfile(pulsePath,'puls.mat'),newMatFile);
+                        %fw.uploadFileToAcquisition(sortedIDs{file},newMatFile);
                         
                         % Matching the PulseOx file to the corresponding
                         % acquisition
                         pulseOxMatches(file,2) = pulseFiles(jj).name;
                         break;
                     catch
-                        if verbose
-                            disp('this does not work.');
-                        end
-                        
                         % Warning if no log files match this acquisition
                         if jj == length(pulseFiles)
-                            warning(['Aquisition ' acqToUpload.label ' has no compatible PulseOx files']);
+                            if verbose
+                                fprintf(['\t' acqToUpload.label ' - \nValid pulse ox file not found\n']);
+                            end
                             allMatched = false;
                         end
                     end
@@ -233,8 +244,8 @@ for session = 1:numel(allSessions)
                 
                 % Delete the zipped dicom file.
                 delete(dcmFile);
-                
             end
         end
     end
 end
+disp(['Start time: ' char(datetime('now'))]);

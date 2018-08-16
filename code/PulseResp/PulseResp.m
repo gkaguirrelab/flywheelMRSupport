@@ -88,9 +88,9 @@ switch ext
 end
 %% Apply smoothing/filtering to the signal
 % Filter signal for high frequency peaks following Verstynen & Deshpande (2011)
-pulse.Hsignal = filter_signal(pulse.data_dmean,'band',pulse.sampTsecs,0.6,2,'verbose',verbose);% 0.6-2.0 Hz Butterworth filter;
+pulse.Hsignal = filter_signal(pulse.data_dmean,'band',pulse.sampTsecs,0.6,2);% 0.6-2.0 Hz Butterworth filter;
 % Filter signal for low frequency peaks
-pulse.Lsignal = filter_signal(pulse.data_dmean,'low',pulse.sampTsecs,-inf,0.6,'verbose',verbose);
+pulse.Lsignal = filter_signal(pulse.data_dmean,'low',pulse.sampTsecs,-inf,0.6);
 FWHM = 0.4*pulse.sampR; % % 400 ms FWHM; following Verstynen & Deshpande (2011)
 sig = FWHM/(2*(sqrt(2*log(2)))); % convert to sigma
 pulse.Lsignal = smooth_kernel(pulse.Lsignal,sig);
