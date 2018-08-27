@@ -59,10 +59,10 @@ end
 %% Paths to local applications needed to run this file
 if ismac
     % Code to run on Mac plaform
-    setpref(toolboxName,'binANTS',fullfile(baseDir,'FLYW_admin/MRI\ processing\ apps/ANTs/OSX_10.13.2/ANTs/bin/bin'));
+    setpref(toolboxName,'binANTS',fullfile(baseDir,'FLYW_admin/MRI_processing_apps/ANTs/OSX_10.13.2/ANTs/bin/bin'));
 elseif isunix
     % Code to run on Linux plaform
-    setpref(toolboxName,'binANTS',fullfile(baseDir,'FLYW_admin/MRI\ processing\ apps/ANTs/Ubuntu_16.04/ANTs/bin/bin'));
+    setpref(toolboxName,'binANTS',fullfile(baseDir,'FLYW_admin/MRI_processing_apps/ANTs/Ubuntu_16.04/ANTs/bin/bin'));
 elseif ispc
     % Code to run on Windows platform
     warning('No binaries for ANTs on PC')
