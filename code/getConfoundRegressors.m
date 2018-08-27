@@ -18,7 +18,7 @@ function [confoundRegressors, confoundLabels] = getConfoundRegressors(filename, 
 %   confoundLabels        - cell array of names of the confounds
 %
 % Optional key/value pairs:
-%   'CSF'                 - 1 column 
+%   'CSF'                 - 1 column
 %   'WhiteMatter'         - 1 column
 %   'GlobalSignal'        - 1 column
 %   'stdDVARS'            - 1 column
@@ -79,7 +79,7 @@ for ii = 1:length(p.UsingDefaults)
         case 'stdDVARS'
             if p.Results.stdDVARS
                 if  ischar(fullConfounds.stdDVARS)
-                    for jj = 1:size(fullConfounds.stdDVARS,1)            
+                    for jj = 1:size(fullConfounds.stdDVARS,1)
                         stdDVARS(jj,1) = str2double(fullConfounds.stdDVARS(jj,:));
                     end
                 else
@@ -91,25 +91,27 @@ for ii = 1:length(p.UsingDefaults)
         case 'non0x2DstdDVARS'
             if p.Results.non0x2DstdDVARS
                 if  ischar(fullConfounds.non0x2DstdDVARS)
-                    for jj = 1:size(fullConfounds.non0x2DstdDVARS,1)            
+                    for jj = 1:size(fullConfounds.non0x2DstdDVARS,1)
                         non0x2DstdDVARS(jj,1) = str2double(fullConfounds.non0x2DstdDVARS(jj,:));
                     end
                 else
                     non0x2DstdDVARS = fullConfounds.non0x2DstdDVARS;
                 end
-              
+                
                 confoundRegressors = [confoundRegressors, non0x2DstdDVARS];
             end
         case 'FramewiseDisplacement'
             if p.Results.FramewiseDisplacement
                 if  ischar(fullConfounds.FramewiseDisplacement)
-                    for jj = 1:size(fullConfounds.FramewiseDisplacement,1)            
+                    for jj = 1:size(fullConfounds.FramewiseDisplacement,1)
                         FramewiseDisplacement(jj,1) = str2double(fullConfounds.FramewiseDisplacement(jj,:));
                     end
                 else
                     FramewiseDisplacement = fullConfounds.FramewiseDisplacement;
                 end
-              
+                if isnan(FramewiseDisplacement(1))
+                    FramewiseDisplacement(1) = 0;
+                end
                 confoundRegressors = [confoundRegressors, FramewiseDisplacement];
             end
         case 'tCompCor'
