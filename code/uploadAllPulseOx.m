@@ -68,7 +68,7 @@ end
 
 if verbose
     disp(['Uploading pulse ox from project ' projectName ' to Flywheel.']);
-    disp(['Start time: ' char(datetime('now'))]);
+    fprintf(['Start time: ' char(datetime('now')) ' \n\n']);
 end
 
 allSessions = fw.getProjectSessions(projID);
