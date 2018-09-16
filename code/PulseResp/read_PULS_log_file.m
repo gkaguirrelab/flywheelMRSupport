@@ -46,23 +46,19 @@ for i = 1:Nvalues
     end
 end
 %% Pull out the values during the dicom acquistion
+timeOffset = 0;
 if ~isempty(pulse.data)
-    [~,ind(1)]      = min(abs(dicom.AT(1) - pulse.AT_ms));
-    [~,ind(2)]      = min(abs((dicom.AT(end) + dicom.TR_all(end)) - pulse.AT_ms));
+    [timeOffset1,ind(1)]      = min(abs(dicom.AT(1) - pulse.AT_ms));
+    [timeOffset2,ind(2)]      = min(abs((dicom.AT(end) + dicom.TR_all(end)) - pulse.AT_ms));
     pulse.data      = pulse.data(ind(1):ind(2));
     pulse.AT_ms     = pulse.AT_ms(ind(1):ind(2));
     isTrigger       = isTrigger(ind(1):ind(2));
     pulse.peaks     = pulse.AT_ms(isTrigger==1);
+    timeOffset = max([timeOffset1 timeOffset2]);
 end
 %% Save final structure values
-if isempty(pulse.data)
-    pulse.data_dmean = [];
-    pulse.dur = [];
-    pulse.sampT = [];
-    pulse.sampTsecs = [];
-    pulse.sampR = [];
-    pulse.delta = [];
-    pulse.bpm = [];
+if isempty(pulse.data) || timeOffset>1000
+    pulse = [];
 else
     pulse.data_dmean = pulse.data - mean(pulse.data); % de-mean pulse.data
     nSamps = length(pulse.data);

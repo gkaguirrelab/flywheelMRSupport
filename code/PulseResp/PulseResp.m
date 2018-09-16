@@ -13,7 +13,7 @@ function [output] = PulseResp(dicomDir,pulsFile,outDir,varargin)
 %   Also computes a collection of regressors, based on 'PulseComplete.m'
 %   written by Omar H Butt Aug 2010, for each individual run.
 %
-%   Inputs:
+%   Inputs:ververbov
 %       dicomDir = full path to directory containing individual dicoms
 %       pulsFile = full path to .puls file with pulse oximetry data for run
 %           associated with the dicomDir
@@ -85,6 +85,10 @@ switch ext
         pulse = read_PULS_log_file(pulsFile,dicom);
     case '.puls'
         pulse = read_PMU_file(pulsFile);
+end
+if isempty(pulse)
+    output = [];
+    return
 end
 %% Apply smoothing/filtering to the signal
 % Filter signal for high frequency peaks following Verstynen & Deshpande (2011)

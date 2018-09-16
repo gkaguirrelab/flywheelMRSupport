@@ -85,7 +85,7 @@ for session = 1:numel(allSessions)
         idx = 0;
         % Get the desired acquisitions
         for acq = 1:numel(allAcqs)
-            if (contains(allAcqs{acq}.label,'tfMRI') || contains(allAcqs{acq}.label,'rfMRI')) && ~contains(allAcqs{acq}.label,'SBRef')
+            if contains(allAcqs{acq}.label,'fMRI') && ~contains(allAcqs{acq}.label,'SBRef')
                 idx = idx+1;
                 newAcqTime = allAcqs{acq}.timestamp;
                 newAcqTime = erase(newAcqTime,extractAfter(newAcqTime,16));
@@ -108,7 +108,8 @@ for session = 1:numel(allSessions)
             for ssn = 1:length(availableSessionNames)
                 if strcmp(allSessions{session}.label,availableSessionNames{ssn})
                     if verbose
-                    disp([allSessions{session}.subject.code ' - ' availableSessionNames{ssn}]);
+                        fprintf('\n');
+                        disp([allSessions{session}.subject.code ' - ' availableSessionNames{ssn}]);
                     end
                     % Find the Subject Directory
                     subjDir = fullfile(pulseOxLocation,sessionPaths{ssn},allSessions{session}.subject.code);
@@ -130,100 +131,88 @@ for session = 1:numel(allSessions)
             pulseDir = fullfile(subjDir, sesDir.name,'ScannerFiles','PulseOx');
             allPulseFiles = dir(fullfile(pulseDir));
             pulseFiles = allPulseFiles(3:end);
-            
-            % Get the current acquisition and check for existing PulseOx log files
+                        
+            % Loop through the fMRI acquisitions in this session. For each
+            % acquisition, we will identify the DICOM file and download
+            % it, and then see if it can be used to generate a valid pulse
+            % ox file.
             for file = 1:length(sortedIDs)
                 acqToUpload = fw.getAcquisition(sortedIDs{file});
                 acqToUploadFiles = acqToUpload.files;
-                logExists = false;
-                for fff = 1:length(acqToUploadFiles)
-                    if strcmp(acqToUploadFiles{fff}.type,'log')
-                        logExists = true;
-                    end
+                
+                % Check for some conditions that would cause us to skip
+                % processing this acquisition. First, check if there are
+                % DICOM files available
+                dicomFileIdx = find(cellfun(@(x) strcmp(x.type,'dicom'),acqToUploadFiles),1);
+                if isempty(dicomFileIdx)
+                    fprintf(['\t' acqToUpload.label '- DICOM file not found; skipping.\n']);
+                    continue
                 end
                 
-                % Warning if log files already exist.
-                if logExists
-                    if verbose
-                        fprintf([acqToUpload.label ' - Pulse ox file already uploaded to flywheel. \nSkipping']);
-                    end
+                % Check for the case in which there is already a pulse file
+                % for this acquisition
+                if any(cellfun(@(x) contains(x.name,'_puls.mat'),acqToUploadFiles))
+                    fprintf(['\t' acqToUpload.label '- puls.mat file already present; skipping.\n']);
+                    continue
                 end
-            end
-            
-            % Create the directory to store the dicom files.
-            fullDicomPath = fullfile(scratchDir,['dicomFiles-' allSessions{session}.subject.code '-' allSessions{session}.label]);
-            if ~exist(fullfile(scratchDir,['dicomFiles-' allSessions{session}.subject.code '-' allSessions{session}.label]))
-                mkdir(fullfile(scratchDir,['dicomFiles-' allSessions{session}.subject.code '-' allSessions{session}.label]));
-            end
-            
-            % Create a directory to store output of PulseResp (comparing dicoms and
-            % PulseOx log files).
-            pulsePath = fullfile(fullDicomPath,['pulseOutput-' acqToUpload.label]);
-            if ~exist(fullfile(fullDicomPath,['pulseOutput-' acqToUpload.label]))
-                mkdir(fullfile(fullDicomPath,['pulseOutput-' acqToUpload.label]));  
-            end
-            
-            % Instantiate outputs
-            pulseOxMatches = strings(length(sortedIDs),2);
-            allMatched = true;
-            
-            % Find the dicom files and download them to the dicom directory.
-            for file = 1:length(sortedIDs)
-                acqToUpload = fw.getAcquisition(sortedIDs{file});
-                pulseOxMatches(file,1) = acqToUpload.label;
-                acqToUploadFiles = acqToUpload.files;
-                for fff = 1:length(acqToUploadFiles)
-                    
-                    % Finding the dicom file
-                    if strcmp(acqToUploadFiles{fff}.type,'dicom')
-                        dcmFile = strcat(fullDicomPath,'/',acqToUploadFiles{fff}.name);
-                        
-                        % Downloading the file
-                        if ~exist(dcmFile)
-                            dcmFile = fw.downloadFileFromAcquisition(acqToUpload.id,acqToUploadFiles{fff}.name,dcmFile);
-                        end
-                        dcmDir = strcat(fullDicomPath,['/dicomDir-' acqToUpload.label]);
-                        
-                        % Unzip the file
-                        unzip(dcmFile,dcmDir);
-                        
-                        % Special case, some files are unzipped differently. This fixes that bug.
-                        if contains(dcmFile,'.dicom')
-                            dirs = dir(dcmDir);
-                            extraDirName = dirs(3).name;
-                            extraDir = fullfile(dirs(3).folder,extraDirName);
-                            movefile(fullfile(extraDir,'*'),dcmDir);
-                            rmdir(extraDir);
-                        end
-                    end
+                
+                % Create the directory to store the dicom files.
+                fullDicomPath = fullfile(scratchDir,['dicomFiles-' allSessions{session}.subject.code '-' allSessions{session}.label]);
+                if ~exist(fullfile(scratchDir,['dicomFiles-' allSessions{session}.subject.code '-' allSessions{session}.label]))
+                    mkdir(fullfile(scratchDir,['dicomFiles-' allSessions{session}.subject.code '-' allSessions{session}.label]));
+                end
+                
+                % Create a directory to store output of PulseResp (comparing dicoms and
+                % PulseOx log files).
+                pulsePath = fullfile(fullDicomPath,['pulseOutput-' acqToUpload.label]);
+                if ~exist(fullfile(fullDicomPath,['pulseOutput-' acqToUpload.label]))
+                    mkdir(fullfile(fullDicomPath,['pulseOutput-' acqToUpload.label]));
+                end
+                
+                % Download the file
+                dcmFile = strcat(fullDicomPath,'/',acqToUploadFiles{dicomFileIdx}.name);
+                if ~exist(dcmFile)
+                    fw.downloadFileFromAcquisition(acqToUpload.id,acqToUploadFiles{dicomFileIdx}.name,dcmFile);
+                end
+                dcmDir = strcat(fullDicomPath,['/dicomDir-' acqToUpload.label]);
+                
+                % Unzip the file
+                unzip(dcmFile,dcmDir);
+                
+                % Special case, some files are unzipped differently. This fixes that bug.
+                if contains(dcmFile,'.dicom')
+                    dirs = dir(dcmDir);
+                    extraDirName = dirs(3).name;
+                    extraDir = fullfile(dirs(3).folder,extraDirName);
+                    movefile(fullfile(extraDir,'*'),dcmDir);
+                    rmdir(extraDir);
                 end
                 
                 % Go through the PulseOx files and compare them to the dicoms.
-                for jj = 1:length(pulseFiles)
+                jj=1;
+                notDoneFlag = true;
+                while notDoneFlag
                     pulseFile = strcat(pulseFiles(jj).folder,'/',pulseFiles(jj).name);
-                    try
-                        % Compare the dicoms and the log file
-                        PulseResp(dcmDir,pulseFile,pulsePath,'verbose',verbose);
-                        if verbose
-                            fprintf(['\t' jj '. ' acqToUpload.label ' - \n' pulseFile '\n']);
-                        end
-                        % If they are matched, upload the log file to Flywheel
-                        %fw.uploadFileToAcquisition(sortedIDs{file},pulseFile);
-                        newMatFile = fullfile(pulsePath,[char(datetime('now')) '.mat']);
-                        movefile(fullfile(pulsePath,'puls.mat'),newMatFile);
-                        %fw.uploadFileToAcquisition(sortedIDs{file},newMatFile);
-                        
-                        % Matching the PulseOx file to the corresponding
-                        % acquisition
-                        pulseOxMatches(file,2) = pulseFiles(jj).name;
-                        break;
-                    catch
-                        % Warning if no log files match this acquisition
-                        if jj == length(pulseFiles)
+                    % Compare the dicoms and the log file
+                    pulseOutput = PulseResp(dcmDir,pulseFile,pulsePath,'verbose',false);
+                    if isempty(pulseOutput)
+                        jj=jj+1;
+                        if jj==length(pulseFiles)
+                            notDoneFlag = false;
                             if verbose
-                                fprintf(['\t' acqToUpload.label ' - \nValid pulse ox file not found\n']);
+                                fprintf(['\t' acqToUpload.label '- Valid pulse ox file not found; skipping.\n']);
                             end
-                            allMatched = false;
+                        end
+                    else
+                        notDoneFlag = false;
+                        % Upload the raw log file and the processed
+                        % puls.mat file to matlab
+                        fw.uploadFileToAcquisition(sortedIDs{file},pulseFile);
+                        newMatFile = fullfile(pulsePath,[acqToUpload.label '_puls.mat']);
+                        movefile(fullfile(pulsePath,'puls.mat'),newMatFile);
+                        fw.uploadFileToAcquisition(sortedIDs{file},newMatFile);
+                        if verbose
+                            fprintf(['\t' acqToUpload.label '- cardiac: %4.1f, resp: %4.1f - ' pulseFile '\n'],pulseOutput.Highrate,pulseOutput.Lowrate);
                         end
                     end
                 end
