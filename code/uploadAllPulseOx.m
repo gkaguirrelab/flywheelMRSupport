@@ -197,7 +197,7 @@ for session = 1:numel(allSessions)
                     pulseOutput = PulseResp(dcmDir,pulseFile,pulsePath,'verbose',false);
                     if isempty(pulseOutput)
                         jj=jj+1;
-                        if jj==length(pulseFiles)
+                        if jj>length(pulseFiles)
                             notDoneFlag = false;
                             if verbose
                                 fprintf(['\t' acqToUpload.label '- Valid pulse ox file not found; skipping.\n']);
