@@ -57,7 +57,7 @@ if ~isempty(pulse.data)
     timeOffset = max([timeOffset1 timeOffset2]);
 end
 %% Save final structure values
-if isempty(pulse.data) || timeOffset>1000
+if isempty(pulse.data) || timeOffset>5000
     pulse = [];
 else
     pulse.data_dmean = pulse.data - mean(pulse.data); % de-mean pulse.data
