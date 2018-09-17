@@ -120,18 +120,23 @@ for session = 1:numel(allSessions)
             % Match Session Folder to Flywheel Session
             formatOut = 'mmddyy';
             dateString = datestr(acqTimes(1),formatOut);
+            sesDir = [];
             for gg = 1:length(folders)
                 if strcmp(folders(gg).name,dateString)
                     sesDir = folders(gg);
                     break;
                 end
             end
+            if isempty(sesDir)
+                fprintf('\t Cannot find a corresponding TOME_data session directory; skipping.\n');
+                continue
+            end
             
             % Find all the PulseOx files for this session
             pulseDir = fullfile(subjDir, sesDir.name,'ScannerFiles','PulseOx');
             allPulseFiles = dir(fullfile(pulseDir));
             pulseFiles = allPulseFiles(3:end);
-                        
+            
             % Loop through the fMRI acquisitions in this session. For each
             % acquisition, we will identify the DICOM file and download
             % it, and then see if it can be used to generate a valid pulse
