@@ -137,6 +137,11 @@ for session = 1:numel(allSessions)
             allPulseFiles = dir(fullfile(pulseDir));
             pulseFiles = allPulseFiles(3:end);
             
+            if isempty(pulseFiles)
+                fprintf('\t No pulse ox files were found for this session; skipping.\n');
+                continue
+            end
+            
             % Loop through the fMRI acquisitions in this session. For each
             % acquisition, we will identify the DICOM file and download
             % it, and then see if it can be used to generate a valid pulse
