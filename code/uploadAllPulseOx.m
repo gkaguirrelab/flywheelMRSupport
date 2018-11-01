@@ -88,9 +88,6 @@ for session = 1:numel(allSessions)
             if contains(allAcqs{acq}.label,'fMRI') && ~contains(allAcqs{acq}.label,'SBRef')
                 idx = idx+1;
                 newAcqTime = allAcqs{acq}.timestamp;
-                newAcqTime = erase(newAcqTime,extractAfter(newAcqTime,16));
-                newAcqTime = strcat(newAcqTime,'+00:00');
-                newAcqTime = datetime(newAcqTime,'InputFormat','yyyy-MM-dd''T''HH:mmXXX','TimeZone','America/New_York');
                 acqTimes(idx) = newAcqTime;
                 acqIDs{end+1} = allAcqs{acq}.id;
             end
