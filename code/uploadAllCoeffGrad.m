@@ -68,6 +68,11 @@ end
 
 allSessions = fw.getProjectSessions(projID);
 
+allAcqs = fw.getSessionAcquisitions(allSessions{1}.id);
+acqIdx = find(cellfun(@(x) ~isempty(x),strfind(cellfun(@(x) x.label,allAcqs,'UniformOutput',false),'T2w_SPC')));
+
+
+
 % Loop through the sessions
 for session = 1:numel(allSessions)
     
