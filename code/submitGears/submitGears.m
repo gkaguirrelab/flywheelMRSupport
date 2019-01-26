@@ -108,7 +108,7 @@ p.parse(tableVarargin{:});
 verbose = eval(lower(p.Results.verbose));
 
 % Define the paramsTable dimensions
-nParamRows = 9; % This is the number of rows that make up the header
+nParamRows = 6; % This is the number of rows that make up the header
 nParamCols = 1; % This is for the first column that has header info
 
 % Hard-coded identity of the header row information
@@ -146,13 +146,13 @@ gear = fw.getGear(theGearID);
 gearCfg = struct(gear.gear.config);
 configDefault = struct;
 keys = fieldnames(gearCfg);
-for i = 1:numel(keys)
-    val = gearCfg.(keys{i});
+for ii = 1:numel(keys)
+    val = gearCfg.(keys{ii});
     if isfield(val, 'default')
-        configDefault.(keys{i}) = val.default;
+        configDefault.(keys{ii}) = val.default;
     else
         if verbose
-            fprintf('No default value for %s\n. It must be set prior to execution.', keys{i});
+            fprintf('No default value for %s\n. It must be set prior to execution.', keys{ii});
         end
     end
 end
@@ -189,19 +189,19 @@ for ii=nParamRows+1:nRows
         
         % Check if the theInputLabel is "rootSessionTag", in which case use
         % the entry to define the rootSessionTag
-        if strcmp('analysisLabel',theInputLabel)
-            analysisLabel = char(paramsTable{ii,jj});
+        if strcmp('rootSessionTag',theInputLabel)
+            rootSessionTag = char(paramsTable{ii,jj});
         end
         
         % Get the entry for this job and input from the params table
         entry = strsplit(char(paramsTable{ii,jj}),'/');
         
         % Determine the project and get the session list
-        if ~isempty(p.results.projectLabel)
+        if ~isempty(p.Results.projectLabel)
             % The project label is defined for all jobs
             projIdx = find(strcmp(cellfun(@(x) x.label,allProjects,'UniformOutput',false),p.Results.projectLabel),1);
             thisProjID = allProjects{projIdx}.id;
-            thisProjLabel = p.results.projectLabel;
+            thisProjLabel = p.Results.projectLabel;
         else
             % The project name is the first component of the entry
             projIdx = find(strcmp(cellfun(@(x) x.label,allProjects,'UniformOutput',false),entry{1}),1);
@@ -248,8 +248,8 @@ for ii=nParamRows+1:nRows
                     theName = entry{4};
                     % Find the acquisition ID
                     acqIdx = find(cellfun(@(x) sum(cellfun(@(y) strcmp(y.name,theName),x.files)),allAcqs));
-                    theID = allAcqs{acqIdx}.id;
-                    theInputLabel = allAcqs{acqIdx}.label;
+                    theContainerID = allAcqs{acqIdx}.id;
+                    theNotesLabel = allAcqs{acqIdx}.label;
                 else
                     % Try to find an acquisition that matches the input
                     % label and contains the specified AcqFileType. Unless
@@ -282,18 +282,16 @@ for ii=nParamRows+1:nRows
                         theFileTypeMatchIdx=theFileTypeMatchIdx(mostRecentIdx);
                     end
                     % Get the file name, ID, and acquisition label
-                    theID = allAcqs{acqIdx}.id;
+                    theContainerID = allAcqs{acqIdx}.id;
                     theName = allAcqs{acqIdx}.files{theFileTypeMatchIdx}.name;
-                    theInputLabel = allAcqs{acqIdx}.label;
+                    theNotesLabel = allAcqs{acqIdx}.label;
                 end
                 theType = 'acquisition';
                 
             case 'analysis'
                 
                 % Get the set of analyses for this session
-                allAnalyses=fw.getSessionAnalyses(allSessions.(char(thisProjID)){sessionIdx}.id);
-                targetLabelParts = strsplit(targetLabel,'/');
-                analysisIdx = find(strcmp(cellfun(@(x) x.gearInfo.name,allAnalyses,'UniformOutput',false),targetLabelParts{1}));
+                allAnalyses=fw.getSessionAnalyses(allSessions.(thisProjLabel){sessionIdx}.id);
                 
                 % Check to see if the analysis name was specified. If not,
                 % use the default
@@ -304,19 +302,21 @@ for ii=nParamRows+1:nRows
                 end
                 
                 % Find which of the analyses contains the target file
+                targetLabelParts = strsplit(targetLabel,'/');
+                analysisIdx = find(strcmp(cellfun(@(x) x.gearInfo.name,allAnalyses,'UniformOutput',false),targetLabelParts{1}));
                 whichAnalysis = find(cellfun(@(y) ~isempty(find(cellfun(@(x) (endsWith(x.name,targetLabelParts{2})),y.files))),allAnalyses(analysisIdx)));
-
+                
                 % Get this file
                 fileIdx = find(cellfun(@(x) (endsWith(x.name,targetLabelParts{2})),allAnalyses{analysisIdx(whichAnalysis)}.files));
-                theID = allAnalyses{analysisIdx(whichAnalysis)}.id;
+                theContainerID = allAnalyses{analysisIdx(whichAnalysis)}.id;
                 theName = allAnalyses{analysisIdx(whichAnalysis)}.files{fileIdx}.name;
                 theType = 'analysis';
-                theInputLabel = 'analysis_file';
-                                
+                theNotesLabel = 'analysis_file';
+                
             case 'session'
-
-                theID = allSessions{sessionIdx}.id;
-                if isempty(allSessions{sessionIdx}.files)
+                
+                theContainerID = allSessions.(thisProjLabel){sessionIdx}.id;
+                if isempty(allSessions.(thisProjLabel){sessionIdx}.files)
                     error('No session file for this entry')
                 end
                 
@@ -327,27 +327,27 @@ for ii=nParamRows+1:nRows
                 else
                     targetLabel = char(paramsTable{DefaultLabelRow,jj});
                 end
-
+                
                 % Find the file
-                fileIdx = find(strcmp(cellfun(@(x) x.name,allSessions{sessionIdx}.files,'UniformOutput',false),targetLabel));
+                fileIdx = find(strcmp(cellfun(@(x) x.name,allSessions.(thisProjLabel){sessionIdx}.files,'UniformOutput',false),targetLabel));
                 if isempty(fileIdx)
                     error('No matching session file for this entry')
                 end
-                theName = allSessions{sessionIdx}.files{fileIdx}.name;
+                theName = allSessions.(thisProjLabel){sessionIdx}.files{fileIdx}.name;
                 theType = 'session';
-                theInputLabel = targetLabel;
+                theNotesLabel = 'session_file';
                 
             case 'project'
-
+                
                 % Only one entry should be present, and it is the identity
                 % of the project file
                 targetLabel = entry{1};
-
-                projFileIdx = find(strcmp(cellfun(@(x) x.name,allProjects{projIdx}.files,'UniformOutput',false),targetLabel);
-                projFileName = allProjects{projIdx}.files{projFileIdx}.name;
-                projFileID = allProjects{projIdx}.id;
+                
+                projFileIdx = find(strcmp(cellfun(@(x) x.name,allProjects{projIdx}.files,'UniformOutput',false),targetLabel));
+                theName = allProjects{projIdx}.files{projFileIdx}.name;
+                theContainerID = allProjects{projIdx}.id;
                 theType = 'project';
-                theInputLabel = targetLabel;
+                theNotesLabel = 'project_file';
                 
             otherwise
                 error('That is not a file type I know')
@@ -357,100 +357,100 @@ for ii=nParamRows+1:nRows
         if strcmp(p.Results.rootSession,theInputLabel)
             % Get the root session information. This is the session to
             % which the analysis product will be assigned
-            rootSessionID = allSessions{sessionIdx}.id;
+            rootSessionID = allSessions.(thisProjLabel){sessionIdx}.id;
             % The root session tag is used to label the outputs of the
             % gear. Sometimes there is leading or trailing white space
             % in the acquisition label. We trim that off here as it can
             % cause troubles in gear execution.
-            analysisLabel = strtrim(theName);
+            rootSessionTag = strtrim(theName);
         end
         
         % Add this input information to the structure
         inputStem = struct('type', theType,...
-            'id', theID, ...
+            'id', theContainerID, ...
             'name', theName);
         inputs.(theInputLabel) = inputStem;
-        inputNotes.(theInputLabel) = theInputLabel;
+        inputNotes.(theInputLabel) = theNotesLabel;
     end
     
-end
-
-
-%% Customize gear configuration
-configKeys = eval(p.Results.configKeys);
-configVals = eval(p.Results.configVals);
-config = configDefault;
-if ~isempty(configKeys)
-    for kk=1:length(configKeys)
-        config.(configKeys{kk})=configVals{kk};
+    
+    %% Customize gear configuration
+    configKeys = eval(p.Results.configKeys);
+    configVals = eval(p.Results.configVals);
+    config = configDefault;
+    if ~isempty(configKeys)
+        for kk=1:length(configKeys)
+            config.(configKeys{kk})=configVals{kk};
+        end
     end
-end
-
-
-%% Assemble Job
-% Create the job body with all the involved files in a struct
-thisJob = struct('gear_id', theGearID, ...
-    'inputs', inputs, ...
-    'config', config);
-
-
-%% Assemble analysis label
-jobLabel = [theGearName ' v' theGearVersion ' [' analysisLabel '] - ' char(datetime('now','TimeZone','local','Format','yyyy-MM-dd HH:mm'))];
-
-
-%% Check if the analysis has already been performed
-skipFlag = false;
-allAnalyses=fw.getSessionAnalyses(rootSessionID);
-if ~isempty(allAnalyses)
-    % Check if this gear has been run
-    priorAnalysesMatchIdx = cellfun(@(x) strcmp(x.gearInfo.name,theGearName),allAnalyses);
-    if any(priorAnalysesMatchIdx)
-        priorAnalysesMatchIdx = find(priorAnalysesMatchIdx);
-        % See if the data tag in any of the prior analyses is a match
-        % Ignore white space in the label parts
-        jobLabelParts = strsplit(jobLabel,{'[',']'});
-        for mm=1:length(priorAnalysesMatchIdx)
-            analysisLabelParts = strsplit(allAnalyses{priorAnalysesMatchIdx(mm)}.label,{'[',']'});
-            if length(analysisLabelParts)>1
-                if strcmp(strtrim(analysisLabelParts{2}),strtrim(jobLabelParts{2}))
-                    skipFlag = true;
-                    priorAnalysisID = allAnalyses{priorAnalysesMatchIdx(mm)}.id;
+    
+    
+    %% Assemble Job
+    % Create the job body with all the involved files in a struct
+    thisJob = struct('gear_id', theGearID, ...
+        'inputs', inputs, ...
+        'config', config);
+    
+    
+    %% Assemble analysis label
+    jobLabel = [theGearName ' v' theGearVersion ' [' rootSessionTag '] - ' char(datetime('now','TimeZone','local','Format','yyyy-MM-dd HH:mm'))];
+    
+    
+    %% Check if the analysis has already been performed
+    skipFlag = false;
+    allAnalyses=fw.getSessionAnalyses(rootSessionID);
+    if ~isempty(allAnalyses)
+        % Check if this gear has been run
+        priorAnalysesMatchIdx = cellfun(@(x) strcmp(x.gearInfo.name,theGearName),allAnalyses);
+        if any(priorAnalysesMatchIdx)
+            priorAnalysesMatchIdx = find(priorAnalysesMatchIdx);
+            % See if the data tag in any of the prior analyses is a match
+            % Ignore white space in the label parts
+            jobLabelParts = strsplit(jobLabel,{'[',']'});
+            for mm=1:length(priorAnalysesMatchIdx)
+                analysisLabelParts = strsplit(allAnalyses{priorAnalysesMatchIdx(mm)}.label,{'[',']'});
+                if length(analysisLabelParts)>1
+                    if strcmp(strtrim(analysisLabelParts{2}),strtrim(jobLabelParts{2}))
+                        skipFlag = true;
+                        priorAnalysisID = allAnalyses{priorAnalysesMatchIdx(mm)}.id;
+                    end
                 end
             end
         end
     end
-end
-if skipFlag
-    if verbose
-        fprintf(['The analysis ' theGearName ' is already present for ' subjectName ', ' jobLabel '; skipping.\n']);
-        % This command may be used to delete the prior analysis
-        %{
-                fw.deleteSessionAnalysis(allSessions{sessionIdx}.id,priorAnalysisID);
-        %}
+    if skipFlag
+        if verbose
+            fprintf(['The analysis ' theGearName ' is already present for ' subjectName ', ' jobLabel '; skipping.\n']);
+            % This command may be used to delete the prior analysis
+            %{
+                fw.deleteSessionAnalysis(allSessions.(thisProjLabel){sessionIdx}.id,priorAnalysisID);
+            %}
+        end
+        continue
     end
-    continue
-end
+    
+    %% Run
+    body = struct('label', jobLabel, 'job', thisJob);
+    [newAnalysisID, ~] = fw.addSessionAnalysis(rootSessionID, body);
+    
+    
+    %% Add a notes entry to the analysis object
+    note = ['InputLabel  -+-  AcquisitionLabel  -+-  FileName\n' ...
+        '-------------|----------------------|-----------\n'];
+    inputFieldNames = fieldnames(inputs);
+    for nn = 1:numel(inputFieldNames)
+        newLine = [inputFieldNames{nn} '  -+-  ' inputNotes.(inputFieldNames{nn}) '  -+-  ' inputs.(inputFieldNames{nn}).name '\n'];
+        note = [note newLine];
+    end
+    fw.addAnalysisNote(newAnalysisID,sprintf(note));
+    
+    %% Report the event
+    if verbose
+        fprintf(['Submitted ' subjectName ' [' newAnalysisID '] - ' jobLabel '\n']);
+    end
+end % loop over rows of the table
 
-%% Run
-body = struct('label', jobLabel, 'job', thisJob);
-[newAnalysisID, ~] = fw.addSessionAnalysis(rootSessionID, body);
-
-
-%% Add a notes entry to the analysis object
-note = ['InputLabel  -+-  AcquisitionLabel  -+-  FileName\n' ...
-    '-------------|----------------------|-----------\n'];
-inputFieldNames = fieldnames(inputs);
-for nn = 1:numel(inputFieldNames)
-    newLine = [inputFieldNames{nn} '  -+-  ' inputNotes.(inputFieldNames{nn}) '  -+-  ' inputs.(inputFieldNames{nn}).name '\n'];
-    note = [note newLine];
-end
-fw.addAnalysisNote(newAnalysisID,sprintf(note));
-
-%% Report the event
-if verbose
-    fprintf(['Submitted ' subjectName ' [' newAnalysisID '] - ' jobLabel '\n']);
-end
-end
+end % main function
 
 
 
