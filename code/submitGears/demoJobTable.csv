@@ -2,7 +2,7 @@ projectLabel,myproject,gearName,hcp-func,rootSession,fMRITimeSeries,ConfigKeys,"
 Inputs,GradientCoeff,SpinEchoNegative,SpinEchoPositive,StructZip,fMRIScout,fMRITimeSeries,FreeSurferLicense,,
 DefaultLabel,,SpinEchoFieldMap_AP,SpinEchoFieldMap_PA,hcp-struct/hcpstruct.zip,,,,,
 FileSuffix,grad,nifti,nifti,zip,nifti,nifti,txt,,
-FileType,project,acquisition,acquisition,analysis,acquisition,acquisition,project,,
+ContainerType,project,acquisition,acquisition,analysis,acquisition,acquisition,project,,
 ExactStringMatch,0,0,0,0,0,0,0,Notes,
 ,,,,,,,,,
 mySubject_01,coeff.grad,mySubject_01/mySessionName,mySubject_01/mySessionName,mySubject_01/myAnatomySessionName,mySubject_01/mySessionName/tfMRI_myTask_PA_run1_SBRef,mySubject_01/mySessionName/tfMRI_myTask_PA_run1,freesurfer_license.txt,,
