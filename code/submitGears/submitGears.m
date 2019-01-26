@@ -54,11 +54,13 @@ function submitGears(paramsFileName)
 %   otherwise specified, the acquisition label that matches this input will
 %   be used.
 %
-%   ROW 4 defines the acquisition file type. An entry is only required for
-%   those inputs that are acquisition files. Valid values here include
-%   "nifit", "bval", "bvec".
+%   ROW 4 defines the acquisition file suffix. An entry is only required
+%   for those inputs that are acquisition files, and if the full path to
+%   the file is not provided. Valid values here include "nifit", "bval",
+%   "bvec".
 %
-%   ROW 5 specifies the file type. Valid values are from the set:
+%   ROW 5 specifies the container type that holds the target file. Valid
+%   values are from the set:
 %       {'acquisition','analysis','session','project'}
 %
 %   ROW 6 indicates if the file name is to be an exact match to a file on
@@ -115,7 +117,7 @@ nParamCols = 1; % This is for the first column that has header info
 InputsRow = 2;
 DefaultLabelRow = 3;
 FileSuffixRow = 4;
-FileTypeRow = 5;
+ContainerTypeRow = 5;
 ExactStringMatchRow = 6;
 
 % Determine the number of inputs to specify for this gear
@@ -169,14 +171,16 @@ for ii=nParamRows+1:nRows
         continue
     end
     
+    % Set the analysisSubmissionTag to empty
+    analysisSubmissionTag = [];
+    
     % Get the subject name
     subjectName = char(paramsTable{ii,1});
     
-    %% Assemble Inputs
     % Create an empty inputs struct
     inputs = struct();
     
-    % Loop through the inputs specified in the paramsTable
+    %% Loop through the inputs 
     for jj=nParamCols+1:nInputCols
         
         % If the entry is empty, skip this input
@@ -184,17 +188,22 @@ for ii=nParamRows+1:nRows
             continue
         end
         
-        % Define the input label
+        % Get the input label
         theInputLabel=char(paramsTable{InputsRow,jj});
         
-        % Check if the theInputLabel is "rootSessionTag", in which case use
-        % the entry to define the rootSessionTag
-        if strcmp('rootSessionTag',theInputLabel)
-            rootSessionTag = char(paramsTable{ii,jj});
-        end
-        
-        % Get the entry for this job and input from the params table
+        % Get the container type
+        theContainerType=char(paramsTable{ContainerTypeRow,jj});
+
+        % Get the entry in the table for this row
         entry = strsplit(char(paramsTable{ii,jj}),'/');
+
+        % Check if the theInputLabel is "analysisSubmissionTag", in which
+        % case use the entry to define a variable that is used to label the
+        % submitted analysis
+        if strcmp('analysisSubmissionTag',theInputLabel)
+            analysisSubmissionTag = entry{1};
+            continue
+        end
         
         % Determine the project and get the session list
         if ~isempty(p.Results.projectLabel)
@@ -217,7 +226,7 @@ for ii=nParamRows+1:nRows
         
         % If this is not a project input, find the matching subject and
         % session
-        if ~strcmp('project',char(paramsTable{FileTypeRow,jj}))
+        if ~strcmp('project',char(paramsTable{ContainerTypeRow,jj}))
             sessionIdx = find(cellfun(@(x) all([strcmp(x.subject.code,entry{1}) strcmp(x.label,entry{2})]),allSessions.(thisProjLabel)));
             if isempty(sessionIdx)
                 error('No matching session and subject for this input entry')
@@ -227,8 +236,8 @@ for ii=nParamRows+1:nRows
             end
         end
         
-        % Switch on the type of input we are looking for
-        switch char(paramsTable{FileTypeRow,jj})
+        % Switch on the container type that holds the target file
+        switch theContainerType
             case 'acquisition'
                 % Obtain the set of acquisitions for the matching session
                 allAcqs = fw.getSessionAcquisitions(allSessions.(thisProjLabel){sessionIdx}.id);
@@ -245,11 +254,11 @@ for ii=nParamRows+1:nRows
                 % find that.
                 if length(entry)==4
                     % We are given the name of the file
-                    theName = entry{4};
+                    theFileName = entry{4};
                     % Find the acquisition ID
-                    acqIdx = find(cellfun(@(x) sum(cellfun(@(y) strcmp(y.name,theName),x.files)),allAcqs));
+                    acqIdx = find(cellfun(@(x) sum(cellfun(@(y) strcmp(y.name,theFileName),x.files)),allAcqs));
                     theContainerID = allAcqs{acqIdx}.id;
-                    theNotesLabel = allAcqs{acqIdx}.label;
+                    theContainerLabel = allAcqs{acqIdx}.label;
                 else
                     % Try to find an acquisition that matches the input
                     % label and contains the specified AcqFileType. Unless
@@ -283,8 +292,8 @@ for ii=nParamRows+1:nRows
                     end
                     % Get the file name, ID, and acquisition label
                     theContainerID = allAcqs{acqIdx}.id;
-                    theName = allAcqs{acqIdx}.files{theFileTypeMatchIdx}.name;
-                    theNotesLabel = allAcqs{acqIdx}.label;
+                    theFileName = allAcqs{acqIdx}.files{theFileTypeMatchIdx}.name;
+                    theContainerLabel = allAcqs{acqIdx}.label;
                 end
                 theType = 'acquisition';
                 
@@ -309,13 +318,14 @@ for ii=nParamRows+1:nRows
                 % Get this file
                 fileIdx = find(cellfun(@(x) (endsWith(x.name,targetLabelParts{2})),allAnalyses{analysisIdx(whichAnalysis)}.files));
                 theContainerID = allAnalyses{analysisIdx(whichAnalysis)}.id;
-                theName = allAnalyses{analysisIdx(whichAnalysis)}.files{fileIdx}.name;
+                theFileName = allAnalyses{analysisIdx(whichAnalysis)}.files{fileIdx}.name;
                 theType = 'analysis';
-                theNotesLabel = 'analysis_file';
+                theContainerLabel = 'analysis_file';
                 
             case 'session'
                 
                 theContainerID = allSessions.(thisProjLabel){sessionIdx}.id;
+                theContainerLabel = allSessions.(thisProjLabel){sessionIdx}.label;
                 if isempty(allSessions.(thisProjLabel){sessionIdx}.files)
                     error('No session file for this entry')
                 end
@@ -333,9 +343,8 @@ for ii=nParamRows+1:nRows
                 if isempty(fileIdx)
                     error('No matching session file for this entry')
                 end
-                theName = allSessions.(thisProjLabel){sessionIdx}.files{fileIdx}.name;
+                theFileName = allSessions.(thisProjLabel){sessionIdx}.files{fileIdx}.name;
                 theType = 'session';
-                theNotesLabel = 'session_file';
                 
             case 'project'
                 
@@ -344,10 +353,10 @@ for ii=nParamRows+1:nRows
                 targetLabel = entry{1};
                 
                 projFileIdx = find(strcmp(cellfun(@(x) x.name,allProjects{projIdx}.files,'UniformOutput',false),targetLabel));
-                theName = allProjects{projIdx}.files{projFileIdx}.name;
+                theFileName = allProjects{projIdx}.files{projFileIdx}.name;
                 theContainerID = allProjects{projIdx}.id;
+                theContainerLabel = allProjects{projIdx}.label;
                 theType = 'project';
-                theNotesLabel = 'project_file';
                 
             otherwise
                 error('That is not a file type I know')
@@ -358,19 +367,24 @@ for ii=nParamRows+1:nRows
             % Get the root session information. This is the session to
             % which the analysis product will be assigned
             rootSessionID = allSessions.(thisProjLabel){sessionIdx}.id;
-            % The root session tag is used to label the outputs of the
-            % gear. Sometimes there is leading or trailing white space
-            % in the acquisition label. We trim that off here as it can
-            % cause troubles in gear execution.
-            rootSessionTag = strtrim(theName);
+            % The analysisSubmissionTag is used to label the outputs of the
+            % gear. If not yet defined for this job, we use the container
+            % label for the rootSession for this label. Sometimes there is
+            % leading or trailing white space in the container label. We
+            % trim that off here as it can cause troubles in gear
+            % execution.
+            if isempty(analysisSubmissionTag)
+                analysisSubmissionTag = strtrim(theContainerLabel);
+            end
         end
         
         % Add this input information to the structure
         inputStem = struct('type', theType,...
             'id', theContainerID, ...
-            'name', theName);
+            'name', theFileName);
         inputs.(theInputLabel) = inputStem;
-        inputNotes.(theInputLabel) = theNotesLabel;
+        inputNotes.(theInputLabel).theContainerLabel = theContainerLabel;
+        inputNotes.(theInputLabel).theContainerType = theContainerType;
     end
     
     
@@ -393,7 +407,7 @@ for ii=nParamRows+1:nRows
     
     
     %% Assemble analysis label
-    jobLabel = [theGearName ' v' theGearVersion ' [' rootSessionTag '] - ' char(datetime('now','TimeZone','local','Format','yyyy-MM-dd HH:mm'))];
+    jobLabel = [theGearName ' v' theGearVersion ' [' analysisSubmissionTag '] - ' char(datetime('now','TimeZone','local','Format','yyyy-MM-dd HH:mm'))];
     
     
     %% Check if the analysis has already been performed
@@ -435,11 +449,11 @@ for ii=nParamRows+1:nRows
     
     
     %% Add a notes entry to the analysis object
-    note = ['InputLabel  -+-  AcquisitionLabel  -+-  FileName\n' ...
-        '-------------|----------------------|-----------\n'];
+    note = ['InputLabel  -+-  ContainerType -+- ContainerLabel  -+-  FileName\n' ...
+            '----------------------------------------------------------------\n'];
     inputFieldNames = fieldnames(inputs);
     for nn = 1:numel(inputFieldNames)
-        newLine = [inputFieldNames{nn} '  -+-  ' inputNotes.(inputFieldNames{nn}) '  -+-  ' inputs.(inputFieldNames{nn}).name '\n'];
+        newLine = [inputFieldNames{nn} '  -+-  ' inputNotes.(inputFieldNames{nn}).theContainerType '  -+-  ' inputNotes.(inputFieldNames{nn}).theContainerLabel '  -+-  ' inputs.(inputFieldNames{nn}).name '\n'];
         note = [note newLine];
     end
     fw.addAnalysisNote(newAnalysisID,sprintf(note));
