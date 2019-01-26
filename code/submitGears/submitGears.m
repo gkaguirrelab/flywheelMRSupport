@@ -25,7 +25,7 @@ function submitGears(paramsFileName)
 %   are parsed as char vectors and later converted to logical. The meaning
 %   of the key values are:
 %
-%  'projectLabel'          - Char or empty. Defines the project that
+%  'projectLabel'         - Char or empty. Defines the project that
 %                           contains the sessions to be analyzed. If left
 %                           empty, the gear expects that the individual
 %                           entries in the table will specify the project
