@@ -14,7 +14,74 @@ function submitGears(paramsFileName)
 %   the gear. The subsequent rows of the table each define an analysis to
 %   be submitted.
 %
-%   The rotuie 
+%   The routine will decline to re-run a job if a job with the same
+%   analysis label appears on the instance.
+%
+% Format of the params table:
+%
+%   ROW 1 contains key-value pairs, running left-to-right. This row is
+%   loaded as a cell array and parsed using the input parser. Some of the
+%   keys call for logical values. Because a csv file saves only text, these
+%   are parsed as char vectors and later converted to logical. The meaning
+%   of the key values are:
+%
+%  'projectName'          - Char or empty. Defines the project that
+%                           contains the sessions to be analyzed. If left
+%                           empty, the gear expects that the individual
+%                           entries in the table will specify the project
+%                           name before the subject and session.
+%  'gearName'             - The name of the gear to be run. This string may
+%                           be found on Flywheel within the list of
+%                           available gears and examining the URL source of
+%                           the gear code. The gearName is the final
+%                           portion of the URL after the last slash.
+%  'rootSession'          - The value is the name of one of the inputs
+%                           types to the gear. The session that is the
+%                           source of this inout type is then the session
+%                           in which the analysis will be placed.
+%  'verbose'              - Char vector of the form "true" or "false".
+%  'configKeys'           - A cell array that contans the char vectors of
+%                           the configuration labels for the gear.
+%  'configValues'         - A cell array of values to be provided along
+%                           with the configKeys.
+%
+%   ROW 2 defines the input labels to the gear. The first column contains
+%   the strng "Inputs". The subsequent columns contain the input labels for
+%   the gear, in any order.
+%
+%   Row 3 defines the default file label for the input. Subsequent rows
+%   direct the routine to look in a particular session for an input. If not
+%   otherwise specified, the acquisition label that matches this input will
+%   be used.
+%
+%   Row 4 defines the acquisition file type. An entry is only required for
+%   those inputs that are acquisition files. Valid values here include
+%   "nifit", "bval", "bvec".
+%
+%   Row 5 is the first of five rows with Boolean settings. This row sets if
+%   the input is being taken from an acquisition. Valid values are 0 or 1.
+%
+%   Row 6 indicates if the input is a Session file. Boolean.
+%
+%   Row 7 indicates if the input is an Analysis file. Boolean.
+%
+%   Row 8 indicates if the input is a Project file. Boolean.
+%
+%   Row 9 indicates if the file name is to be an exact match to a file on
+%   the Flywheel server. If set to false, the routine will trim white space
+%   off the start and end of the file name and be case insensitive in its
+%   match.
+%
+%   The subsequent rows of the table each specify a job. The first column
+%   is the subject ID; this value is used only to label the analysis. The
+%   subsequent columns specify the input to the gear, using the format of:
+%
+%       (projectName/)subjectID/sessionLabel/acquisitionLabel/acquisitionfileName
+%       (projectName/)subjectID/sessionLabel/gearName/analysisfileName
+%       (projectName/)subjectID/sessionLabel/sessionFileName
+%       (projectName/)projectFileName
+%
+%   where the projectName is optional if it was specified in the header
 %
 % Inputs:
 %   paramsFileName        - String. Full path to a csv file that contains
@@ -23,29 +90,7 @@ function submitGears(paramsFileName)
 % Outputs:
 %   none
 %
-% Examples:
-%{
-    % A demonstration of a 
-    submitHCPGears('tomeHCPStructParams.csv');
-%}
-%{
-    submitHCPGears('tomeNoahRetinoParams.csv');
-%}
-%{
-    submitHCPGears('tomeHCPFuncParams_Session1.csv');
-%}
-%{
-    submitHCPGears('tomeHCPFuncICAFIX_Session1.csv');
-%}
-%{
-    submitHCPGears('tomeHCPFuncParams_Session2.csv');
-%}
-%{
-    submitHCPGears('tomeHCPFuncICAFIX_Session2.csv');
-%}
-%{
-    submitHCPGears('tomeHCPDiffParams.csv');
-%}
+
 
 
 %% Load and parse the params table
@@ -54,24 +99,24 @@ paramsTable = readtable(paramsFileName,'ReadVariableNames',false,'FileType','tex
 
 % Parse the table header
 p = inputParser; p.KeepUnmatched = false;
-p.addParameter('projectName','tome',@ischar);
+p.addParameter('projectName','',@(x)(isempty(x) || ischar(x)));
 p.addParameter('gearName','hcp-func',@ischar);
 p.addParameter('rootSession','fMRITimeSeries',@ischar);
 p.addParameter('verbose','true',@ischar);
-p.addParameter('includeFreeSurferLicenseFile','true',@(x)(islogical(x) || ischar(x)));
-p.addParameter('freesurferLicenseFileName','freesurfer_license.txt',@(x)(isempty(x) || ischar(x)));
 p.addParameter('configKeys','',@(x)(isempty(x) || ischar(x)));
 p.addParameter('configVals','',@(x)(isempty(x) || ischar(x)));
 tableVarargin = paramsTable{1,1:end};
 p.parse(tableVarargin{:});
 
-% The parameters arrive as char variables from the csv file. Eval some of
-% them here.
-verbose = eval(p.Results.verbose);
+% The parameters arrive as char variables from the csv file. We create
+% logical variables out of some of these, and handle the possibility that
+% the string is in upper case.
+verbose = eval(lower(p.Results.verbose));
 includeFreeSurferLicenseFile = eval(lower(p.Results.includeFreeSurferLicenseFile));
 
+
 % Define the paramsTable dimensions
-nParamRows = 8; % This is the number of rows that make up the header
+nParamRows = 9; % This is the number of rows that make up the header
 nParamCols = 1; % This is for the first column that has header info
 
 % Hard-coded identity of the header row information
@@ -91,23 +136,9 @@ nRows = size(paramsTable,1);
 fw = flywheel.Flywheel(getpref('flywheelMRSupport','flywheelAPIKey'));
 
 
-%% Get project ID and sessions
+%% Get project IDs
 allProjects = fw.getAllProjects;
-projIdx = find(strcmp(cellfun(@(x) x.label,allProjects,'UniformOutput',false),p.Results.projectName),1);
-projID = allProjects{projIdx}.id;
-allSessions = fw.getProjectSessions(projID);
 
-
-%% Identify the freesurfer license file
-if includeFreeSurferLicenseFile
-    fsLicFileIdx = find(strcmp(cellfun(@(x) x.name,allProjects{projIdx}.files,'UniformOutput',false),p.Results.freesurferLicenseFileName));
-    fsLicFileName = allProjects{projIdx}.files{fsLicFileIdx}.name;
-    fsLicFileID = allProjects{projIdx}.id;
-    fsLicFileType = 'project';
-    fsLicFileLabel = 'FreeSurferLicense';
-else
-    fsLicFileID = [];
-end
 
 %% Construct the gear configuration
 % Get all the gears
@@ -144,7 +175,14 @@ for ii=nParamRows+1:nRows
     if isempty(char(paramsTable{ii,1}))
         continue
     end
+
     
+    %% Get project ID and sessions
+    projIdx = find(strcmp(cellfun(@(x) x.label,allProjects,'UniformOutput',false),p.Results.projectName),1);
+    projID = allProjects{projIdx}.id;
+    allSessions = fw.getProjectSessions(projID);
+
+
     % Get the subject name
     subjectName = char(paramsTable{ii,1});
         
@@ -238,11 +276,12 @@ for ii=nParamRows+1:nRows
                     theID = allAcqs{acqIdx}.id;
                     theAcqLabel = allAcqs{acqIdx}.label;
                 else
-                    % Try to find an acquisition that matches the input label
-                    % and contains the specified AcqFileType. Unless told to
-                    % use exact matching, trim off leading and trailing
-                    % whitespace, as the stored label in flywheel sometimes has
-                    % a trailing space. Also, use a case insensitive match.
+                    % Try to find an acquisition that matches the input
+                    % label and contains the specified AcqFileType. Unless
+                    % told to use exact matching, trim off leading and
+                    % trailing whitespace, as the stored label in flywheel
+                    % sometimes has a trailing space. Also, use a case
+                    % insensitive match.
                     if logical(str2double(char(paramsTable{ExactStringMatchRow,jj})))
                         labelMatchIdx = cellfun(@(x) strcmp(x.label,targetLabel),allAcqs);
                     else
@@ -306,6 +345,7 @@ for ii=nParamRows+1:nRows
         acqNotes.(fsLicFileLabel) = 'projectFile';
     end
     
+    
     %% Customize gear configuration
     configKeys = eval(p.Results.configKeys);
     configVals = eval(p.Results.configVals);
@@ -315,6 +355,7 @@ for ii=nParamRows+1:nRows
             config.(configKeys{kk})=configVals{kk};
         end
     end
+    
     
     %% Assemble Job
     % Create the job body with all the involved files in a struct
