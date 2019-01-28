@@ -99,15 +99,21 @@ p.addParameter('projectLabel','',@(x)(isempty(x) || ischar(x)));
 p.addParameter('gearName','hcp-func',@ischar);
 p.addParameter('rootSession','fMRITimeSeries',@ischar);
 p.addParameter('verbose','true',@ischar);
+p.addParameter('overwriteExistingAnalysis','false',@ischar);
 p.addParameter('configKeys','',@(x)(isempty(x) || ischar(x)));
 p.addParameter('configVals','',@(x)(isempty(x) || ischar(x)));
+% Grab the first row of the table
 tableVarargin = paramsTable{1,1:end};
+% Remove all empty cells
+tableVarargin=tableVarargin(cellfun(@(x) ~isempty(x),tableVarargin));
+% Parse
 p.parse(tableVarargin{:});
 
 % The parameters arrive as char variables from the csv file. We create
 % logical variables out of some of these, and handle the possibility that
 % the string is in upper case.
 verbose = eval(lower(p.Results.verbose));
+overwriteExistingAnalysis = eval(lower(p.Results.overwriteExistingAnalysis));
 
 % Define the paramsTable dimensions
 nParamRows = 6; % This is the number of rows that make up the header
@@ -433,14 +439,17 @@ for ii=nParamRows+1:nRows
         end
     end
     if skipFlag
-        if verbose
+        if verbose && ~overwriteExistingAnalysis
             fprintf(['The analysis ' theGearName ' is already present for ' subjectName ', ' jobLabel '; skipping.\n']);
-            % This command may be used to delete the prior analysis
-            %{
-                fw.deleteSessionAnalysis(allSessions.(thisProjLabel){sessionIdx}.id,priorAnalysisID);
-            %}
         end
-        continue
+        if verbose && overwriteExistingAnalysis
+            fprintf(['The analysis ' theGearName ' is already present for ' subjectName ', ' jobLabel '; deleting and re-running.\n']);
+        end
+        if overwriteExistingAnalysis
+            fw.deleteSessionAnalysis(allSessions.(thisProjLabel){sessionIdx}.id,priorAnalysisID);
+        else
+            continue
+        end
     end
     
     %% Run
