@@ -104,8 +104,8 @@ p.addParameter('configKeys','',@(x)(isempty(x) || ischar(x)));
 p.addParameter('configVals','',@(x)(isempty(x) || ischar(x)));
 % Grab the first row of the table
 tableVarargin = paramsTable{1,1:end};
-% Remove all empty cells
-tableVarargin=tableVarargin(cellfun(@(x) ~isempty(x),tableVarargin));
+% Remove all trailing empty cells
+tableVarargin=tableVarargin(1:find(cellfun(@(x) ~isempty(x),tableVarargin),1,'last'));
 % Parse
 p.parse(tableVarargin{:});
 
