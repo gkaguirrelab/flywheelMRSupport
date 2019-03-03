@@ -98,6 +98,7 @@ p = inputParser; p.KeepUnmatched = false;
 p.addParameter('projectLabel','',@(x)(isempty(x) || ischar(x)));
 p.addParameter('gearName','hcp-func',@ischar);
 p.addParameter('rootSession','fMRITimeSeries',@ischar);
+p.addParameter('rootSessionID',@(x)(isempty(x) || ischar(x)));
 p.addParameter('verbose','true',@ischar);
 p.addParameter('overwriteExistingAnalysis','false',@ischar);
 p.addParameter('configKeys','',@(x)(isempty(x) || ischar(x)));
@@ -176,9 +177,17 @@ for ii=nParamRows+1:nRows
     if isempty(char(paramsTable{ii,1}))
         continue
     end
+
+    % Check if this is a stop row. If so, stop
+    if strcmp(char(paramsTable{ii,1}),'stop')
+        return
+    end
     
     % Set the analysisSubmissionTag to empty
     analysisSubmissionTag = [];
+    
+    % Set the rootSessionID to empty    
+    rootSessionID = [];
     
     % Get the subject name
     subjectName = char(paramsTable{ii,1});
@@ -210,7 +219,15 @@ for ii=nParamRows+1:nRows
             analysisSubmissionTag = entry{1};
             continue
         end
-        
+
+        % Check if the theInputLabel is "rootSessionID", in which case use
+        % the entry to define a variable that is used to label the
+        % submitted analysis
+        if strcmp('rootSessionID',theInputLabel)
+            rootSessionID = entry{1};
+            continue
+        end
+
         % Determine the project and get the session list
         if ~isempty(p.Results.projectLabel)
             % The project label is defined for all jobs
@@ -369,18 +386,22 @@ for ii=nParamRows+1:nRows
         end
         
         % Check if theInputLabel is the rootSession
-        if strcmp(p.Results.rootSession,theInputLabel)
-            % Get the root session information. This is the session to
-            % which the analysis product will be assigned
-            rootSessionID = allSessions.(thisProjLabel){sessionIdx}.id;
-            % The analysisSubmissionTag is used to label the outputs of the
-            % gear. If not yet defined for this job, we use the container
-            % label for the rootSession for this label. Sometimes there is
-            % leading or trailing white space in the container label. We
-            % trim that off here as it can cause troubles in gear
-            % execution.
-            if isempty(analysisSubmissionTag)
-                analysisSubmissionTag = strtrim(theContainerLabel);
+        if ~isempty(p.Results.rootSession)
+            if strcmp(p.Results.rootSession,theInputLabel)
+                % Get the root session information if not already defined. This
+                % is the session to which the analysis product will be assigned
+                if isempty(rootSessionID)
+                    rootSessionID = allSessions.(thisProjLabel){sessionIdx}.id;
+                end
+                % The analysisSubmissionTag is used to label the outputs of the
+                % gear. If not yet defined for this job, we use the container
+                % label for the rootSession for this label. Sometimes there is
+                % leading or trailing white space in the container label. We
+                % trim that off here as it can cause troubles in gear
+                % execution.
+                if isempty(analysisSubmissionTag)
+                    analysisSubmissionTag = strtrim(theContainerLabel);
+                end
             end
         end
         
