@@ -61,6 +61,8 @@ function analyzeWholeBrain(subjectID, runName, covariateStruct, varargin)
 %  CIFTISuffix          - a string that refers to the suffix applied
 %                         functional files following processing that gets
 %                         appended to the runName
+%  TR                   - a number that defines the TR, in ms, of the
+%                         functional scan
 % Outputs:
 %  None. Several maps are saved out to Dropbox, however.
 
@@ -73,6 +75,7 @@ p.addParameter('cleanedTimeSeriesSavePath', [], @ischar);
 p.addParameter('statsSavePath', [], @ischar);
 p.addParameter('CIFTISuffix', '_Atlas_hp2000_clean.dtseries.nii', @ischar);
 p.addParameter('rawPath', [], @ischar);
+p.addParameter('TR', 800, @isnumeric);
 p.addParameter('CIFTITemplateName', 'template.dscalar.nii', @ischar);
 
 
@@ -152,7 +155,7 @@ if strcmp(p.Results.fileType, 'volume')
         end
         regressors(:,emptyColumns) = [];
         
-        [ cleanedTimeSeriesMatrix, stats_physioMotionWMV ] = cleanTimeSeries( rawTimeSeriesPerVoxel, regressors, regressorsTimebase, 'meanCenterRegressors', false);
+        [ cleanedTimeSeriesMatrix, stats_physioMotionWMV ] = cleanTimeSeries( rawTimeSeriesPerVoxel, regressors, regressorsTimebase, 'meanCenterRegressors', false, 'totalTime', nFrames*TR, 'TR', TR);
         clear stats_physioMotionWMV rawTimeSeriesPerVoxel meanTimeSeries regressors functionalScan
     else
         cleanedTimeSeriesMatrix = rawTimeSeriesPerVoxel;
@@ -210,8 +213,11 @@ for nn = 1:length(covariateNames)
     regressors = [regressors; covariateStruct.(covariateNames{nn})];
 end
 
+
 % perform the regression
-[ ~, stats ] = cleanTimeSeries( cleanedTimeSeriesMatrix, regressors, covariateStruct.timebase, 'meanCenterRegressors', true);
+TR = p.Results.TR;
+totalTime = size(cleanedTimeSeriesMatrix,2)*TR;
+[ ~, stats ] = cleanTimeSeries( cleanedTimeSeriesMatrix, regressors, covariateStruct.timebase, 'meanCenterRegressors', true, 'totalTime', totalTime, 'TR', TR);
 
 % determine output type
 if strcmp(p.Results.fileType, 'volume')
