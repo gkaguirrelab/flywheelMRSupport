@@ -228,14 +228,17 @@ end
 
 
 % save our rSquared
+if ~exist(p.Results.statsSavePath,'dir')
+    mkdir(p.Results.statsSavePath);
+end
 saveName = fullfile(p.Results.statsSavePath, [runName, '_', 'rSquared', suffix]);
-makeWholeBrainMap(stats.(statsOfInterest{ss})(1,:), voxelIndices, templateFile, saveName);
+makeWholeBrainMap(stats.rSquared(1,:), voxelIndices, templateFile, saveName);
 
 % save our beta maps
 for cc = 1:length(covariateNames)
     
     saveName = fullfile(p.Results.statsSavePath, [runName, '_beta_', covariateNames{cc}, suffix]);
-    makeWholeBrainMap(stats.(statsOfInterest{ss})(cc,:), voxelIndices, templateFile, saveName);
+    makeWholeBrainMap(stats.beta(cc,:), voxelIndices, templateFile, saveName);
     
     
 end
