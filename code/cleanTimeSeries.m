@@ -44,8 +44,8 @@ function [ cleanedTimeSeries, stats ] = cleanTimeSeries( inputTimeSeries, regres
 %							  to the number of time series.
 
 p = inputParser; p.KeepUnmatched = true;
-p.addParameter('TR',800, @isnumber);
-p.addParameter('totalTime',336000, @isnumber);
+p.addParameter('TR',800, @isnumeric);
+p.addParameter('totalTime',336000, @isnumeric);
 p.addParameter('meanCenterRegressors', true, @islogical);
 p.addParameter('zeroNansInRegressors', true, @islogical);
 p.addParameter('saveName', [], @ischar);
