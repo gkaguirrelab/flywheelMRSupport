@@ -1,4 +1,4 @@
-function analyzeWholeBrain(subjectID, runName, varargin)
+function analyzeWholeBrain(subjectID, runName, covariateStruct, varargin)
 % Complete analysis pipeline for analyzing resting state data, ultimately
 % producing maps
 %
@@ -13,17 +13,28 @@ function analyzeWholeBrain(subjectID, runName, varargin)
 %  ventricular signals to be used as nuisance regressors, 4) extract time
 %  series from each gray matter voxel in the functional volume, 5) regress
 %  out signals from physio, motion, white matter, and ventricles to yield
-%  cleaned time series, and 6) regress out a series of eye signals extracted
-%  from pupillometry and create maps out of these statistics.
+%  cleaned time series, and 6) regress out a series of eye signals
+%  extracted from pupillometry and create maps out of these statistics.
 %
 %  This routien also requires several pieces of pre-installed software.
-%  These include FSL and AFNI.
+%  These include FSL, HCP Workbench, and AFNI.
+%
+%  Besides the explicit inputs listed below, the routine expects to be able
+%  to find certain data files. If processing in the volume, these include:
+%  the functional volume, anatomic volume (for registration), aparc+aseg
+%  parcellation, physio files, and movement text files. Also note that this
+%  analysis is intended to be performed in subject native space. For CIFTI
+%  processing, these include: the functional grayordinates and mid-thickness
+%  maps.
 %
 % Inputs:
 %  subjectID:           - a string that identifies the relevant subject (i.e.
 %                         'TOME_3040'
 %  runName:             - a string that identifies the relevant run (i.e.
 %                         'rfMRI_REST_AP_Run3')
+%  covariateStruct      - a struct that defines our covariates of interest.
+%                         One of the subfields must labeled 'timebase' and
+%                         define the timebase for all other covariates
 %
 % Optional key-value pairs:
 %  skipPhysioMotionWMVRegression  - a logical, with false set as the
@@ -39,11 +50,17 @@ function analyzeWholeBrain(subjectID, runName, varargin)
 %                         intended to be analyzed in subject-native space,
 %                         and 'CIFTI' in MNI volume, freeSurfer cortical
 %                         surface space.
-%  covariatesToAnalyze  - a cell array, the contents of which are a string,
-%                         that specify which covariates to analyze. Options
-%                         include the default (a subset of our eye signals)
-%                         or 'flash', which makes the basic box car for
-%                         flash runs
+%  cleanedTimeSeriesSavePath - a string that defines a path to where we
+%                         want to save the cleanedTimeSeries results
+%  statsSavePath        - a string that defines a path to where we
+%                         want to save the whole brain maps
+%  rawPath              - a string that defines a path to where raw data
+%                         lives
+%  CIFTITEmplateName    - a string that defines the file name of the
+%                         template file
+%  CIFTISuffix          - a string that refers to the suffix applied
+%                         functional files following processing that gets
+%                         appended to the runName
 % Outputs:
 %  None. Several maps are saved out to Dropbox, however.
 
@@ -51,19 +68,16 @@ function analyzeWholeBrain(subjectID, runName, varargin)
 p = inputParser; p.KeepUnmatched = true;
 
 p.addParameter('skipPhysioMotionWMVRegression', false, @islogical);
-p.addParameter('covariatesToAnalyze', {'pupilDiameter+pupilChange', 'pupilDiameter', 'pupilChange'}, @iscell);
 p.addParameter('fileType', 'volume', @ischar);
+p.addParameter('cleanedTimeSeriesSavePath', [], @ischar);
+p.addParameter('statsSavePath', [], @ischar);
+p.addParameter('CIFTISuffix', '_Atlas_hp2000_clean.dtseries.nii', @ischar);
+p.addParameter('rawPath', [], @ischar);
+p.addParameter('CIFTITemplateName', 'template.dscalar.nii', @ischar);
+
+
 
 p.parse(varargin{:});
-%% Define paths
-[ paths ] = definePaths(subjectID);
-
-freeSurferDir = paths.freeSurferDir;
-anatDir = paths.anatDir;
-pupilDir = paths.pupilDir;
-functionalDir = paths.functionalDir;
-outputDir = paths.outputDir;
-
 
 %% Register functional scan to anatomical scan
 
@@ -71,13 +85,13 @@ if strcmp(p.Results.fileType, 'volume')
     [ ~ ] = registerFunctionalToAnatomical(subjectID, runName);
     
     %% Smooth functional scan
-    functionalFile = fullfile(functionalDir, [runName, '_native.nii.gz']);
+    functionalFile = fullfile(p.Results.rawPath, [runName, '_native.nii.gz']);
     [ functionalScan ] = smoothVolume(functionalFile);
     %% Get white matter and ventricular signal
     % make white matter and ventricular masks
-    targetFile = (fullfile(functionalDir, [runName, '_native.nii.gz']));
+    targetFile = (fullfile(p.Results.rawPath, [runName, '_native.nii.gz']));
     
-    aparcAsegFile = fullfile(anatDir, [subjectID, '_aparc+aseg.nii.gz']);
+    aparcAsegFile = fullfile(p.Results.rawPath, [subjectID, '_aparc+aseg.nii.gz']);
     
     if ~(p.Results.skipPhysioMotionWMVRegression)
         [whiteMatterMask, ventriclesMask] = makeMaskOfWhiteMatterAndVentricles(aparcAsegFile, targetFile);
@@ -102,9 +116,9 @@ if strcmp(p.Results.fileType, 'volume')
     %% Clean time series from physio regressors
     if ~(p.Results.skipPhysioMotionWMVRegression)
         
-        physioRegressors = load(fullfile(functionalDir, [runName, '_puls.mat']));
+        physioRegressors = load(fullfile(p.Results.rawDir, [runName, '_puls.mat']));
         physioRegressors = physioRegressors.output;
-        motionTable = readtable((fullfile(functionalDir, [runName, '_Movement_Regressors.txt'])));
+        motionTable = readtable((fullfile(p.Results.rawDir, [runName, '_Movement_Regressors.txt'])));
         motionRegressors = table2array(motionTable(:,7:12));
         regressors = [physioRegressors.all, motionRegressors];
         
@@ -148,7 +162,7 @@ end
 
 if strcmp(p.Results.fileType, 'CIFTI')
     %% Smooth the functional file
-    functionalFile = fullfile(functionalDir, [runName, '_Atlas_hp2000_clean.dtseries.nii']);
+    functionalFile = fullfile(p.Results.rawPath, [runName, p.Results.CIFTISuffix]);
     [ smoothedGrayordinates ] = smoothCIFTI(functionalFile);
     
     % mean center the time series of each grayordinate
@@ -163,104 +177,63 @@ if strcmp(p.Results.fileType, 'CIFTI')
 end
 
 % save out cleaned time series
-savePath = fullfile(getpref('mriTOMEAnalysis', 'TOME_analysisPath'), 'mriTOMEAnalysis', 'wholeBrain', subjectID);
-if ~exist(savePath,'dir')
-    mkdir(savePath);
-end
-save(fullfile(savePath, [runName, '_cleanedTimeSeries']), 'cleanedTimeSeriesMatrix', 'voxelIndices', '-v7.3');
-
-
-%% Remove eye signals from BOLD data'
-if ~strcmp(p.Results.covariatesToAnalyze, 'flash')
-    [ covariates ] = makeEyeSignalCovariates(subjectID, runName);
-    covariates.timebase = covariates.timebase + 1000;
-    covariatesToAnalyze = p.Results.covariatesToAnalyze;
-elseif strcmp(p.Results.covariatesToAnalyze, 'flash')
-    covariatesToAnalyze = {'flash'};
-    
-    TR = 0.8*1000;
-    % make stimulus struct
-    % use same deltaT as the TR, so all of our regressors are on the same
-    % timebase
-    deltaT = 0.8*1000;
-    totalTime = 336*1000;
-    stimulusStruct.timebase = 0:deltaT:totalTime-TR;
-    
-    % light-on or light-off segments last 12 seconds
-    segmentLength = 12*1000;
-    numberOfBlocks = totalTime/segmentLength;
-    stimulusStruct.values = zeros(1,length(stimulusStruct.timebase));
-    
-    % actually make the stimulus profile. we find the boundaries of the 12-s
-    % chunks, then make the values in between 1 if it's an even-numbered chunk
-    % otherwise they're left as 0.
-    for bb = 1:numberOfBlocks
-        firstIndex = find(stimulusStruct.timebase == (bb - 1) * segmentLength);
-        secondIndex = find(stimulusStruct.timebase == (bb) * segmentLength) - 1;
-        if isempty(secondIndex)
-            secondIndex = length(stimulusStruct.timebase);
-        end
-        if round(bb/2) == bb/2
-            stimulusStruct.values(firstIndex:secondIndex) = 1;
-        end
-        
+if ~isempty(p.Results.cleanedTimeSeriesSavePath)
+    savePath = p.Results.cleanedTimeSeriesSavePath;
+    if ~exist(savePath,'dir')
+        mkdir(savePath);
     end
-    
-    [ flashConvolved ] = convolveRegressorWithHRF(stimulusStruct.values', stimulusStruct.timebase);
-    
-    
-    covariates.flashConvolved = flashConvolved;
-    covariates.firstDerivativeFlashConvolved = diff(covariates.flashConvolved);
-    covariates.firstDerivativeFlashConvolved = [NaN, covariates.firstDerivativeFlashConvolved];
-    covariates.timebase = stimulusStruct.timebase;
+    save(fullfile(savePath, [runName, '_cleanedTimeSeries']), 'cleanedTimeSeriesMatrix', 'voxelIndices', '-v7.3');
 end
 
+
+%% Analyze regressors
 if strcmp(p.Results.fileType, 'volume')
     templateFile = functionalFile;
 elseif strcmp(p.Results.fileType, 'CIFTI')
-    templateFile = fullfile(anatDir, 'template.dscalar.nii');
+    templateFile = fullfile(p.Results.rawPath, p.Results.CIFTITemplateName);
 end
 
-for ii = 1:length(covariatesToAnalyze)
-    
-    % assemble regressors
-    regressors = [];
-    
-    % if we're dealing with more than one eye signal, loop over each
-    multipleRegressorLabels = strsplit(covariatesToAnalyze{ii}, '+');
-    for rr = 1:length(multipleRegressorLabels)
-        regressors = [regressors;  covariates.([multipleRegressorLabels{rr}, 'Convolved']); covariates.(['firstDerivative', upper(multipleRegressorLabels{rr}(1)), multipleRegressorLabels{rr}(2:end), 'Convolved'])];
-    end
-    
-    % perform the regression
-    [ ~, stats ] = cleanTimeSeries( cleanedTimeSeriesMatrix, regressors', covariates.timebase, 'meanCenterRegressors', true);
-    
-    % determine output type
-    if strcmp(p.Results.fileType, 'volume')
-        suffix = '.nii.gz';
-    elseif strcmp(p.Results.fileType, 'CIFTI')
-        suffix = '.dscalar.nii';
-    end
-    
-    % which stats we want to compile
-    statsOfInterest = {'rSquared', 'beta'};
-    for ss = 1:length(statsOfInterest)
-        if ~strcmp(statsOfInterest{ss}, 'beta')
-            saveName = fullfile(getpref('mriTOMEAnalysis', 'TOME_analysisPath'), 'mriTOMEAnalysis', 'wholeBrain', subjectID, [runName,'_', covariatesToAnalyze{ii}, '_', statsOfInterest{ss}, suffix]);
-            makeWholeBrainMap(stats.(statsOfInterest{ss})(1,:), voxelIndices, templateFile, saveName);
-        else
-           for  rr = 1:length(multipleRegressorLabels)
-               
-                saveName = fullfile(getpref('mriTOMEAnalysis', 'TOME_analysisPath'), 'mriTOMEAnalysis', 'wholeBrain', subjectID, [runName,'_', covariatesToAnalyze{ii}, '_', multipleRegressorLabels{rr}, '_', statsOfInterest{ss}, suffix]);
-                makeWholeBrainMap(stats.(statsOfInterest{ss})(rr*2-1,:), voxelIndices, templateFile, saveName);
-                
-                saveName = fullfile(getpref('mriTOMEAnalysis', 'TOME_analysisPath'), 'mriTOMEAnalysis', 'wholeBrain', subjectID, [runName,'_', covariatesToAnalyze{ii}, '_', ['firstDerivative', upper(multipleRegressorLabels{rr}(1)), multipleRegressorLabels{rr}(2:end)], '_', statsOfInterest{ss}, suffix]);
-                makeWholeBrainMap(stats.(statsOfInterest{ss})(rr*2,:).*60, voxelIndices, templateFile, saveName);
 
-           end
-        end
+% assemble regressors
+regressors = [];
+
+covariateStructFieldNames = fieldnames(covariateStruct);
+
+covariateNames = [];
+for nn = 1:length(covariateStructFieldNames)
+    if ~contains(covariateStructFieldNames{nn}, 'timebase')
+        covariateNames{end+1} = covariateStructFieldNames{nn};
     end
 end
+
+for nn = 1:length(covariateNames)
+    regressors = [regressors; covariateStruct.(covariateNames{nn})];
+end
+
+% perform the regression
+[ ~, stats ] = cleanTimeSeries( cleanedTimeSeriesMatrix, regressors, covariateStruct.timebase, 'meanCenterRegressors', true);
+
+% determine output type
+if strcmp(p.Results.fileType, 'volume')
+    suffix = '.nii.gz';
+elseif strcmp(p.Results.fileType, 'CIFTI')
+    suffix = '.dscalar.nii';
+end
+
+
+% save our rSquared
+saveName = fullfile(p.Results.statsSavePath, [runName, '_', 'rSquared', suffix]);
+makeWholeBrainMap(stats.(statsOfInterest{ss})(1,:), voxelIndices, templateFile, saveName);
+
+% save our beta maps
+for cc = 1:length(covariateNames)
+    
+    saveName = fullfile(p.Results.statsSavePath, [runName, '_beta_', covariateNames{cc}, suffix]);
+    makeWholeBrainMap(stats.(statsOfInterest{ss})(cc,:), voxelIndices, templateFile, saveName);
+    
+    
+end
+
 
 
 clearvars
