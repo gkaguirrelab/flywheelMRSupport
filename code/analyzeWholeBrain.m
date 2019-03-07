@@ -1,4 +1,4 @@
-function analyzeWholeBrain(subjectID, runName, covariateStruct, varargin)
+function analyzeWholeBrain(subjectID, runName, nuisanceStruct, covariateStruct, varargin)
 % Complete analysis pipeline for analyzing resting state data, ultimately
 % producing maps
 %
@@ -32,6 +32,10 @@ function analyzeWholeBrain(subjectID, runName, covariateStruct, varargin)
 %                         'TOME_3040'
 %  runName:             - a string that identifies the relevant run (i.e.
 %                         'rfMRI_REST_AP_Run3')
+%  nuisanceStruct       - a struct that defines our nuisance regressors.
+%                         One of the subfields must labeled 'timebase' and
+%                         define the timebase for all other regressors. If
+%                         empty, no nuisance regression will be performed.
 %  covariateStruct      - a struct that defines our covariates of interest.
 %                         One of the subfields must labeled 'timebase' and
 %                         define the timebase for all other covariates
@@ -170,6 +174,62 @@ if strcmp(p.Results.fileType, 'CIFTI')
     
     % mean center the time series of each grayordinate
     [ cleanedTimeSeriesMatrix ] = meanCenterTimeSeries(smoothedGrayordinates);
+    
+    % perform nuisance regression, if desired
+    if ~isempty(nuisanceStruct)
+        % perform the regression
+        TR = p.Results.TR;
+        totalTime = size(cleanedTimeSeriesMatrix,2)*TR;
+        
+        % assemble regressors
+        regressors = [];
+        
+        nuisanceStructFieldNames = fieldnames(nuisanceStruct);
+        
+        nuisanceNames = [];
+        for nn = 1:length(nuisanceStructFieldNames)
+            if ~contains(nuisanceStructFieldNames{nn}, 'timebase')
+                nuisanceNames{end+1} = nuisanceStructFieldNames{nn};
+            end
+        end
+        
+        for nn = 1:length(nuisanceNames)
+            regressors = [regressors; nuisanceStruct.(nuisanceNames{nn})];
+        end
+        
+        
+        [ cleanedTimeSeriesMatrix, nuisanceStats ] = cleanTimeSeries( cleanedTimeSeriesMatrix, regressors, nuisanceStruct.timebase, 'meanCenterRegressors', true, 'totalTime', totalTime, 'TR', TR);
+        
+
+        templateFile = fullfile(p.Results.rawPath, p.Results.CIFTITemplateName);
+
+        
+        % make maps to summarize
+        % determine output type
+        if strcmp(p.Results.fileType, 'volume')
+            suffix = '.nii.gz';
+        elseif strcmp(p.Results.fileType, 'CIFTI')
+            suffix = '.dscalar.nii';
+        end
+        
+        
+        % save our rSquared
+        if ~exist(p.Results.statsSavePath,'dir')
+            mkdir(p.Results.statsSavePath);
+        end
+        saveName = fullfile(p.Results.statsSavePath, [runName, '_', 'nuisance_rSquared', suffix]);
+        makeWholeBrainMap(stats.rSquared(1,:), voxelIndices, templateFile, saveName);
+
+        % save our beta maps
+        for cc = 1:length(nuisanceNames)
+            
+            saveName = fullfile(p.Results.statsSavePath, [runName, '_nuisance_beta_', nuisanceNames{cc}, suffix]);
+            makeWholeBrainMap(stats.beta(cc,:), voxelIndices, templateFile, saveName);
+            
+            
+        end
+        
+    end
     
     % make dumnmy voxel indices. this doesn't really apply for grayordinate
     % based analysis, but the code is expecting the variable to at least
