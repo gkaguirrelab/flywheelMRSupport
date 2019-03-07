@@ -218,13 +218,13 @@ if strcmp(p.Results.fileType, 'CIFTI')
             mkdir(p.Results.statsSavePath);
         end
         saveName = fullfile(p.Results.statsSavePath, [runName, '_', 'nuisance_rSquared', suffix]);
-        makeWholeBrainMap(stats.rSquared(1,:), voxelIndices, templateFile, saveName);
+        makeWholeBrainMap(nuisanceStats.rSquared(1,:), voxelIndices, templateFile, saveName);
 
         % save our beta maps
         for cc = 1:length(nuisanceNames)
             
             saveName = fullfile(p.Results.statsSavePath, [runName, '_nuisance_beta_', nuisanceNames{cc}, suffix]);
-            makeWholeBrainMap(stats.beta(cc,:), voxelIndices, templateFile, saveName);
+            makeWholeBrainMap(nuisanceStats.beta(cc,:), voxelIndices, templateFile, saveName);
             
             
         end
