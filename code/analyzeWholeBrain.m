@@ -217,6 +217,8 @@ if strcmp(p.Results.fileType, 'CIFTI')
         if ~exist(p.Results.statsSavePath,'dir')
             mkdir(p.Results.statsSavePath);
         end
+        
+        voxelIndices = [];
         saveName = fullfile(p.Results.statsSavePath, [runName, '_', 'nuisance_rSquared', suffix]);
         makeWholeBrainMap(nuisanceStats.rSquared(1,:), voxelIndices, templateFile, saveName);
 
