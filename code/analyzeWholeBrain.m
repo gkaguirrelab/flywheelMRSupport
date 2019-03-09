@@ -74,6 +74,7 @@ function analyzeWholeBrain(subjectID, runName, nuisanceStruct, covariateStruct, 
 p = inputParser; p.KeepUnmatched = true;
 
 p.addParameter('skipPhysioMotionWMVRegression', false, @islogical);
+p.addParameter('smooth', true, @islogical);
 p.addParameter('fileType', 'volume', @ischar);
 p.addParameter('cleanedTimeSeriesSavePath', [], @ischar);
 p.addParameter('statsSavePath', [], @ischar);
@@ -170,10 +171,14 @@ end
 if strcmp(p.Results.fileType, 'CIFTI')
     %% Smooth the functional file
     functionalFile = fullfile(p.Results.rawPath, [runName, p.Results.CIFTISuffix]);
-    [ smoothedGrayordinates ] = smoothCIFTI(functionalFile);
+    if p.Results.smooth
+        [ grayordinates ] = smoothCIFTI(functionalFile);
+    else
+        [ grayordinates ] = loadCIFTI(functionalFile);
+    end
     
     % mean center the time series of each grayordinate
-    [ cleanedTimeSeriesMatrix ] = meanCenterTimeSeries(smoothedGrayordinates);
+    [ cleanedTimeSeriesMatrix ] = meanCenterTimeSeries(grayordinates);
     
     % perform nuisance regression, if desired
     if ~isempty(nuisanceStruct)
@@ -238,7 +243,7 @@ if strcmp(p.Results.fileType, 'CIFTI')
     % exist
     voxelIndices = [];
     
-    clear smoothedGrayordinates
+    clear grayordinates
 end
 
 % save out cleaned time series
