@@ -27,6 +27,12 @@ function [ meanTimeSeries, timeSeriesPerRow] = extractTimeSeriesFromMaskCIFTI(ma
 %                         tendency of all incldued grayordinates to save
 %                         out. Options inlcude 'mean', 'median', and 'PCA'
 %                         (but 'PCA likely isn't working as intended).
+%  threshold            - a number that defines the acceptable upper limit
+%                         of time series data. If not empty (the default),
+%                         a time series that contains values greater than
+%                         this threshold will be censored. This is intended
+%                         as being a means of removing outlier time series.
+%                         Note that mean centering happens prior to this.
 %
 % Outputs:
 %  meanTimeSeries       - a 1 x TR vector which contains the central
@@ -39,6 +45,8 @@ function [ meanTimeSeries, timeSeriesPerRow] = extractTimeSeriesFromMaskCIFTI(ma
 %% Input Parser
 p = inputParser; p.KeepUnmatched = true;
 p.addParameter('whichCentralTendency', 'mean', @ischar);
+p.addParameter('meanCenter', true, @islogical);
+p.addParameter('threshold', [], @isnumeric);
 p.parse(varargin{:});
 
 % expand mask to be of the same dimension as the grayordinates
@@ -50,6 +58,19 @@ timeSeriesPerRow = timeSeriesPerRow(any(timeSeriesPerRow,2),:);
 if p.Results.meanCenter
     timeSeriesPerRow = meanCenterTimeSeries(timeSeriesPerRow);
 end
+
+% identify time series that have extreme values, and discard, if desired
+if ~isempty(p.Results.threshold)
+   for rr = size(timeSeriesPerRow,1)
+       if any(abs(timeSeriesPerRow(rr,:))>p.Results.threshold)
+           timeSeriesPerRow(rr,:) = zeros(1,size(timeSeriesPerRow,2));
+           timeSeriesPerRow = timeSeriesPerRow(any(timeSeriesPerRow,2),:);
+       end
+   end
+end
+
+
+
 
 if strcmp(p.Results.whichCentralTendency, 'mean')    
     meanTimeSeries = mean(timeSeriesPerRow,1);
