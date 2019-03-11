@@ -126,7 +126,7 @@ maskMatrix = combinedMap;
 
 % save out mask, if desired
 if ~isempty(p.Results.saveName)
-    makeWholeBrainMap(combinedMap, [], fullfile(pathToBensonMasks, 'lh.benson14_varea.dscalar.nii'), p.Results.saveName)
+    makeWholeBrainMap(combinedMap', [], fullfile(pathToBensonMasks, 'lh.benson14_varea.dscalar.nii'), p.Results.saveName)
 end
 
 
