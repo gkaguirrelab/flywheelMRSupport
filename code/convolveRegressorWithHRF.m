@@ -18,7 +18,8 @@ function [convolvedRegressorTimeSeries] = convolveRegressorWithHRF(regressorTime
 %  regressorTimebase               - a 1 x n vector, where each value of n
 %                                    refers to the time at which that
 %                                    observation of regressorTimeSeries was
-%                                    captured
+%                                    captured. The timebase must be in
+%                                    milliseconds.
 %
 % Outputs:
 %  convolvedRegressorTimeSeries    - a 1 x n vector, where n refers to the
