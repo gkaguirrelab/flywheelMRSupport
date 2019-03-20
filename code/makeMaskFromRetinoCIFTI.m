@@ -59,8 +59,7 @@ areaNum = 1;
 eccenRange = [0 90];
 anglesRange = [0 180];
 hemisphere = 'combined';
-saveName = fullfile('/User
-s', userID, 'Desktop/combined.V1.dscalar.nii');
+saveName = fullfile('/Users', userID, 'Desktop/combined.V1.dscalar.nii');
 pathToBensonMasks = fullfile('/Users', userID, 'Dropbox-Aguirre-Brainard-Lab/MELA_analysis/mriTOMEAnalysis/flywheelOutput/benson/');
 pathToBensonMappingFile = fullfile('/Users', userID, 'Dropbox-Aguirre-Brainard-Lab/MELA_analysis/mriTOMEAnalysis/flywheelOutput/benson/indexMapping.mat');
 pathToTemplateFile = fullfile('/Users', userID, 'Dropbox-Aguirre-Brainard-Lab/MELA_analysis/mriTOMEAnalysis/flywheelOutput/benson/template.dscalar.nii');
@@ -87,10 +86,11 @@ pathToBensonMasks = p.Results.pathToBensonMasks;
 %% Restrict area
 
 areaMask = zeros(327684,1);
-rhAreaMask = zeros(163842,1);
-lhAreaMask = zeros(163842,1);
+
 
 if strcmp(hemisphere, 'lh') || strcmp(hemisphere, 'combined')
+    rhAreaMask = zeros(163842,1);
+    lhAreaMask = zeros(163842,1);
     lhAreaMap = MRIread(fullfile(p.Results.pathToBensonMasks, 'lh.benson14_varea.v4_0.mgz'));
     lhAreaMap = lhAreaMap.vol;
     
@@ -105,6 +105,8 @@ if strcmp(hemisphere, 'lh') || strcmp(hemisphere, 'combined')
     
 end
 if strcmp(hemisphere, 'rh') || strcmp(hemisphere, 'combined')
+    rhAreaMask = zeros(163842,1);
+    lhAreaMask = zeros(163842,1);
     rhAreaMap = MRIread(fullfile(p.Results.pathToBensonMasks, 'rh.benson14_varea.v4_0.mgz'));
     rhAreaMap = rhAreaMap.vol;
     
@@ -122,10 +124,11 @@ end
 
 %% Restrict eccen
 eccenMask = zeros(327684,1);
-rhEccenMask = zeros(163842,1);
-lhEccenMask = zeros(163842,1);
+
 
 if strcmp(hemisphere, 'lh') || strcmp(hemisphere, 'combined')
+    rhEccenMask = zeros(163842,1);
+    lhEccenMask = zeros(163842,1);
     lhEccenMap = MRIread(fullfile(p.Results.pathToBensonMasks, 'lh.benson14_eccen.v4_0.mgz'));
     lhEccenMap = lhEccenMap.vol;
     
@@ -137,6 +140,8 @@ if strcmp(hemisphere, 'lh') || strcmp(hemisphere, 'combined')
     
 end
 if strcmp(hemisphere, 'rh') || strcmp(hemisphere, 'combined')
+    rhEccenMask = zeros(163842,1);
+    lhEccenMask = zeros(163842,1);
     rhEccenMap = MRIread(fullfile(p.Results.pathToBensonMasks, 'rh.benson14_eccen.v4_0.mgz'));
     rhEccenMap = rhEccenMap.vol;
     
@@ -153,10 +158,11 @@ end
 
 %% Restrict polar angles
 anglesMask = zeros(327684,1);
-rhAnglesMask = zeros(163842,1);
-lhAnglesMask = zeros(163842,1);
+
 
 if strcmp(hemisphere, 'lh') || strcmp(hemisphere, 'combined')
+    rhAnglesMask = zeros(163842,1);
+    lhAnglesMask = zeros(163842,1);
     lhAnglesMap = MRIread(fullfile(p.Results.pathToBensonMasks, 'lh.benson14_angle.v4_0.mgz'));
     lhAnglesMap = lhAnglesMap.vol;
     
@@ -168,6 +174,8 @@ if strcmp(hemisphere, 'lh') || strcmp(hemisphere, 'combined')
     
 end
 if strcmp(hemisphere, 'rh') || strcmp(hemisphere, 'combined')
+    rhAnglesMask = zeros(163842,1);
+    lhAnglesMask = zeros(163842,1);
     rhAnglesMap = MRIread(fullfile(p.Results.pathToBensonMasks, 'rh.benson14_angle.v4_0.mgz'));
     rhAnglesMap = rhAnglesMap.vol;
     
@@ -207,7 +215,7 @@ if ~isempty(p.Results.threshold)
     ciftiMask(ciftiMask < p.Results.threshold) = 0;
     ciftiMask(ciftiMask >= p.Results.threshold) = 1;
 end
-    
+
 
 % save out mask, if desired
 if ~isempty(p.Results.saveName)
