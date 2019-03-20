@@ -41,6 +41,7 @@ areaNum = 1;
 eccenRange = [0 90];
 anglesRange = [0 180];
 hemisphere = 'lh';
+threshold = 0.9;
 
 [~, userID] = system('whoami');
 userID = strtrim(userID);
@@ -50,23 +51,27 @@ pathToBensonMasks = fullfile('/Users', userID, 'Dropbox-Aguirre-Brainard-Lab/MEL
 pathToBensonMappingFile = fullfile('/Users', userID, 'Dropbox-Aguirre-Brainard-Lab/MELA_analysis/mriTOMEAnalysis/flywheelOutput/benson/indexMapping.mat');
 pathToTemplateFile = fullfile('/Users', userID, 'Dropbox-Aguirre-Brainard-Lab/MELA_analysis/mriTOMEAnalysis/flywheelOutput/benson/template.dscalar.nii');
 
-[ maskMatrix ] = makeMaskFromRetinoCIFTI(areaNum, eccenRange, anglesRange, hemisphere, 'saveName', saveName, 'pathToBensonMasks', pathToBensonMasks, 'pathToBensonMappingFile', pathToBensonMappingFile);
+[ maskMatrix ] = makeMaskFromRetinoCIFTI(areaNum, eccenRange, anglesRange, hemisphere, 'saveName', saveName, 'pathToBensonMasks', pathToBensonMasks, 'pathToTemplateFile', pathToTemplateFile, 'pathToBensonMappingFile', pathToBensonMappingFile, 'threshold', threshold);
 
 
-% make a V1 mask for the right hemisphere
+% make a V1 mask for the combined right-left hemisphere
 areaNum = 1;
 eccenRange = [0 90];
 anglesRange = [0 180];
-hemisphere = 'rh';
-savePath = definePaths('benson');
-saveName = fullfile(savePath.anatDir, 'rh.V1.dscalar.nii');
-[ maskMatrix ] = makeMaskFromRetinoCIFTI(areaNum, eccenRange, anglesRange, hemisphere, 'saveName', saveName);
+hemisphere = 'combined';
+saveName = fullfile('/User
+s', userID, 'Desktop/combined.V1.dscalar.nii');
+pathToBensonMasks = fullfile('/Users', userID, 'Dropbox-Aguirre-Brainard-Lab/MELA_analysis/mriTOMEAnalysis/flywheelOutput/benson/');
+pathToBensonMappingFile = fullfile('/Users', userID, 'Dropbox-Aguirre-Brainard-Lab/MELA_analysis/mriTOMEAnalysis/flywheelOutput/benson/indexMapping.mat');
+pathToTemplateFile = fullfile('/Users', userID, 'Dropbox-Aguirre-Brainard-Lab/MELA_analysis/mriTOMEAnalysis/flywheelOutput/benson/template.dscalar.nii');
+
+[ maskMatrix ] = makeMaskFromRetinoCIFTI(areaNum, eccenRange, anglesRange, hemisphere, 'saveName', saveName, 'pathToBensonMasks', pathToBensonMasks, 'pathToTemplateFile', pathToTemplateFile, 'pathToBensonMappingFile', pathToBensonMappingFile, 'threshold', threshold);
 
 %}
 
 p = inputParser; p.KeepUnmatched = true;
 p.addParameter('saveName', [], @ischar)
-p.addParameter('threshold', 0.8, @isnumeric)
+p.addParameter('threshold', [], @isnumeric)
 p.addParameter('pathToBensonMasks', [], @ischar)
 p.addParameter('pathToBensonMappingFile', [], @ischar)
 p.addParameter('pathToTemplateFile', [], @ischar)
@@ -198,6 +203,11 @@ end
 
 ciftiMask = matrix * combinedMask;
 
+if ~isempty(p.Results.threshold)
+    ciftiMask(ciftiMask < p.Results.threshold) = 0;
+    ciftiMask(ciftiMask >= p.Results.threshold) = 1;
+end
+    
 
 % save out mask, if desired
 if ~isempty(p.Results.saveName)
