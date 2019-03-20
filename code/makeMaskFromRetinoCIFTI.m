@@ -1,9 +1,9 @@
-function [ maskMatrix ] = makeMaskFromRetinoCIFTI(areaNum, eccenRange, anglesRange, hemisphere, varargin)
+function [ ciftiMask ] = makeMaskFromRetinoCIFTI(areaNum, eccenRange, anglesRange, hemisphere, varargin)
 % Make binary mask from Benson's retinotopy project.
 %
-% Syntax: 
+% Syntax:
 %  [ maskMatrix ] = makeMaskFromRetinoCIFTI(areaNum, eccenRange, anglesRange, hemisphere
-% 
+%
 % Description:
 %  This routine makes binary retinotopy masks from Noah's project to be
 %  used with CIFTI files processed through HPC's standard pipeline. We
@@ -14,20 +14,20 @@ function [ maskMatrix ] = makeMaskFromRetinoCIFTI(areaNum, eccenRange, anglesRan
 %  surviving grayordinate was therefore included in each individual mask.
 %
 % Inputs:
-%  areaNum:					- a number that defines which visual area we're looking for. 
+%  areaNum:					- a number that defines which visual area we're looking for.
 % 					          Options include 1 (for V1), 2 or 3.
 %  eccenRange:		        - the range in eccentricity to be included, ranging from 0 to 90.
-%  anglesRange:	            - the range in polar angle to be included, ranging from 0 to 180. 
-% 						      Dorsal regions would include values between 90 and 180, 
+%  anglesRange:	            - the range in polar angle to be included, ranging from 0 to 180.
+% 						      Dorsal regions would include values between 90 and 180,
 %							  while ventral regions would include values between 0 and 90.
-%  hemisphere:              - which hemisphere to be analyzed. Options include 'lh' for 
+%  hemisphere:              - which hemisphere to be analyzed. Options include 'lh' for
 % 							  left hemisphere, 'rh' for right, or 'combined' for both.
 %
 % Optional key-value pairs:
-%  saveName					- a string which defines the full path for where to save the 
-%						      resulting mask. If no value is passed (the default), no mask 
+%  saveName					- a string which defines the full path for where to save the
+%						      resulting mask. If no value is passed (the default), no mask
 %							  is saved.
-%  pathToBensonMasks        - a string which defines the full path to where the previously 
+%  pathToBensonMasks        - a string which defines the full path to where the previously
 %							  made Benson masks in CIFTI format are located.
 %
 % Output:
@@ -41,9 +41,17 @@ areaNum = 1;
 eccenRange = [0 90];
 anglesRange = [0 180];
 hemisphere = 'lh';
-savePath = definePaths('benson');
-saveName = fullfile(savePath.anatDir, 'lh.V1.dscalar.nii');
-[ maskMatrix ] = makeMaskFromRetinoCIFTI(areaNum, eccenRange, anglesRange, hemisphere, 'saveName', saveName);
+
+[~, userID] = system('whoami');
+userID = strtrim(userID);
+
+saveName = fullfile('/Users', userID, 'Desktop/lh.V1.dscalar.nii');
+pathToBensonMasks = fullfile('/Users', userID, 'Dropbox-Aguirre-Brainard-Lab/MELA_analysis/mriTOMEAnalysis/flywheelOutput/benson/');
+pathToBensonMappingFile = fullfile('/Users', userID, 'Dropbox-Aguirre-Brainard-Lab/MELA_analysis/mriTOMEAnalysis/flywheelOutput/benson/indexMapping.mat');
+pathToTemplateFile = fullfile('/Users', userID, 'Dropbox-Aguirre-Brainard-Lab/MELA_analysis/mriTOMEAnalysis/flywheelOutput/benson/template.dscalar.nii');
+
+[ maskMatrix ] = makeMaskFromRetinoCIFTI(areaNum, eccenRange, anglesRange, hemisphere, 'saveName', saveName, 'pathToBensonMasks', pathToBensonMasks, 'pathToBensonMappingFile', pathToBensonMappingFile);
+
 
 % make a V1 mask for the right hemisphere
 areaNum = 1;
@@ -58,7 +66,10 @@ saveName = fullfile(savePath.anatDir, 'rh.V1.dscalar.nii');
 
 p = inputParser; p.KeepUnmatched = true;
 p.addParameter('saveName', [], @ischar)
+p.addParameter('threshold', 0.8, @isnumeric)
 p.addParameter('pathToBensonMasks', [], @ischar)
+p.addParameter('pathToBensonMappingFile', [], @ischar)
+p.addParameter('pathToTemplateFile', [], @ischar)
 p.parse(varargin{:});
 
 
@@ -69,64 +80,128 @@ hemispheres  = {'lh', 'rh'};
 pathToBensonMasks = p.Results.pathToBensonMasks;
 
 %% Restrict area
-areaMap = zeros(91282,1);
+
+areaMask = zeros(327684,1);
+rhAreaMask = zeros(163842,1);
+lhAreaMask = zeros(163842,1);
+
 if strcmp(hemisphere, 'lh') || strcmp(hemisphere, 'combined')
-    [ lhAreaTemplate ] = loadCIFTI(fullfile(pathToBensonMasks, 'lh.benson14_varea.dscalar.nii'));
-    areaMap(lhAreaTemplate == areaNum) = 1;
+    lhAreaMap = MRIread(fullfile(p.Results.pathToBensonMasks, 'lh.benson14_varea.v4_0.mgz'));
+    lhAreaMap = lhAreaMap.vol;
     
-    rhAreaTemplate = zeros(91282,1);
+    
+    
+    lhAreaMask(lhAreaMap == areaNum) = 1;
+    
+    lhAreaMask = [lhAreaMask; rhAreaMask];
+    
+    areaMask = areaMask + lhAreaMask;
+    
+    
 end
 if strcmp(hemisphere, 'rh') || strcmp(hemisphere, 'combined')
-    lhAreaTemplate = zeros(91282,1);
+    rhAreaMap = MRIread(fullfile(p.Results.pathToBensonMasks, 'rh.benson14_varea.v4_0.mgz'));
+    rhAreaMap = rhAreaMap.vol;
+    
+    rhAreaMask(rhAreaMap == areaNum) = 1;
+    
+    rhAreaMask = [lhAreaMask; rhAreaMask];
+    
+    areaMask = areaMask + rhAreaMask;
     
     
-    [ rhAreaTemplate ] = loadCIFTI(fullfile(pathToBensonMasks, 'rh.benson14_varea.dscalar.nii'));
-    areaMap(rhAreaTemplate == areaNum) = 1;
+    
+    
 end
 
 
-%% Restrict eccentricity
-eccenMap = zeros(91282,1);
+%% Restrict eccen
+eccenMask = zeros(327684,1);
+rhEccenMask = zeros(163842,1);
+lhEccenMask = zeros(163842,1);
+
 if strcmp(hemisphere, 'lh') || strcmp(hemisphere, 'combined')
-    [ lhEccenTemplate ] = loadCIFTI(fullfile(pathToBensonMasks, 'lh.benson14_eccen.dscalar.nii'));
-    eccenMap(lhEccenTemplate >= eccenRange(1) & lhEccenTemplate <= eccenRange(2)) = 1;
+    lhEccenMap = MRIread(fullfile(p.Results.pathToBensonMasks, 'lh.benson14_eccen.v4_0.mgz'));
+    lhEccenMap = lhEccenMap.vol;
     
-    rhEccenTemplate = zeros(91282,1);
+    lhEccenMask(lhEccenMap >= eccenRange(1) & lhEccenMap <= eccenRange(2)) = 1;
+    
+    lhEccenMask = [lhEccenMask; rhEccenMask];
+    
+    eccenMask = eccenMask + lhEccenMask;
+    
 end
 if strcmp(hemisphere, 'rh') || strcmp(hemisphere, 'combined')
-    lhEccenTemplate = zeros(91282,1);
+    rhEccenMap = MRIread(fullfile(p.Results.pathToBensonMasks, 'rh.benson14_eccen.v4_0.mgz'));
+    rhEccenMap = rhEccenMap.vol;
     
     
-    [ rhEccenTemplate ] = loadCIFTI(fullfile(pathToBensonMasks, 'rh.benson14_eccen.dscalar.nii'));
-    eccenMap(rhEccenTemplate >= eccenRange(1) & rhEccenTemplate <= eccenRange(2)) = 1;
+    rhEccenMask(rhEccenMap >= eccenRange(1) & rhEccenMap <= eccenRange(2)) = 1;
+    
+    rhEccenMask = [lhEccenMask; rhEccenMask];
+    
+    eccenMask = eccenMask + rhEccenMask;
+    
+    
 end
 
 
 %% Restrict polar angles
-anglesMap = zeros(91282,1);
+anglesMask = zeros(327684,1);
+rhAnglesMask = zeros(163842,1);
+lhAnglesMask = zeros(163842,1);
+
 if strcmp(hemisphere, 'lh') || strcmp(hemisphere, 'combined')
-    [ lhAnglesTemplate ] = loadCIFTI(fullfile(pathToBensonMasks, 'lh.benson14_angle.dscalar.nii'));
-    anglesMap(lhAnglesTemplate >= anglesRange(1) & lhAnglesTemplate <= anglesRange(2)) = 1;
+    lhAnglesMap = MRIread(fullfile(p.Results.pathToBensonMasks, 'lh.benson14_angle.v4_0.mgz'));
+    lhAnglesMap = lhAnglesMap.vol;
     
-    rhAnglesTemplate = zeros(91282,1);
+    lhAnglesMask(lhAnglesMap >= anglesRange(1) & lhAnglesMap <= anglesRange(2)) = 1;
+    
+    lhAnglesMask = [lhAnglesMask; rhAnglesMask];
+    
+    anglesMask = anglesMask + lhAnglesMask;
+    
 end
 if strcmp(hemisphere, 'rh') || strcmp(hemisphere, 'combined')
-    lhAnglesTemplate = zeros(91282,1);
+    rhAnglesMap = MRIread(fullfile(p.Results.pathToBensonMasks, 'rh.benson14_angle.v4_0.mgz'));
+    rhAnglesMap = rhAnglesMap.vol;
     
     
-    [ rhAnglesTemplate ] = loadCIFTI(fullfile(pathToBensonMasks, 'rh.benson14_angle.dscalar.nii'));
-    anglesMap(rhAnglesTemplate >= anglesRange(1) & rhAnglesTemplate <= anglesRange(2)) = 1;
+    rhAnglesMask(rhAnglesMap >= anglesRange(1) & rhAnglesMap <= anglesRange(2)) = 1;
+    
+    rhAnglesMask = [lhAnglesMask; rhAnglesMask];
+    
+    anglesMask = anglesMask + rhAnglesMask;
+    
+    
 end
 
 
 %% Combine maps
-combinedMap = zeros(91282,1);
-combinedMap(areaMap == 1 & eccenMap == 1 & anglesMap == 1) = 1;
-maskMatrix = combinedMap;
+combinedMask = zeros(327684,1);
+combinedMask(areaMask == 1 & eccenMask == 1 & anglesMask == 1) = 1;
+
+%% Convert FreeSurfer mask to HCP
+matrix = sparse(91282, 327684);
+load(p.Results.pathToBensonMappingFile);
+for ii = 1:length(ciftifsaverageix)
+    matrix(ciftifsaverageix(ii), ii) = 1;
+end
+
+sumPerRow = sum(matrix,2);
+
+nonZeroIndices = find(matrix);
+for ii = 1:length(nonZeroIndices)
+    [row,column] = ind2sub(size(matrix), nonZeroIndices(ii));
+    matrix(row,column) = matrix(row,column)/sumPerRow(row);
+end
+
+ciftiMask = matrix * combinedMask;
+
 
 % save out mask, if desired
 if ~isempty(p.Results.saveName)
-    makeWholeBrainMap(combinedMap', [], fullfile(pathToBensonMasks, 'lh.benson14_varea.dscalar.nii'), p.Results.saveName)
+    makeWholeBrainMap(ciftiMask', [], fullfile(p.Results.pathToTemplateFile), p.Results.saveName)
 end
 
 
