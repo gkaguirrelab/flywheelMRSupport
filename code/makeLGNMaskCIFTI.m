@@ -1,6 +1,46 @@
 function [ LGNMask ] = makeLGNMaskCIFTI(varargin)
+% Routine to make a binary LGN mask.
 %
-
+% Syntax:
+%  [ LGNMask ] = makeLGNMaskCIFTI
+%
+% Description:
+%  This routine makes a binary mask in CIFTI format from Julich
+%  histological atlas (https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Atlases).
+%  First, command line tools that are part of the FSL package are used to
+%  identify the left and right LGN from the Julich atlas, and then combine
+%  them into a single mask. Next, this mask in the volume is converted to a
+%  mask in the grayordinate space via wb_command.
+%
+% Note that both FSL and workbench command line tools are required.
+%
+% Optional key-value pairs:
+%  workbenchPath         - a string that defines the full path to where
+%                          workbench commands can be found.
+%  templateFile          - a string which defines the full path to the
+%                          template CIFTI file to be used. All that's
+%                          needed is for the mapping between grayordinate
+%                          value and location, which will be the same for
+%                          basically anything created by the HCP
+%                          preprocessing routines. The default is a
+%                          template file stored with the Benson masks.
+%  maskPath              - a string which defines the path to which we'd
+%                          like to save out the created masks, including
+%                          the intermediate masks
+%  pathToJuelichAtlas    - a string which defines the full path to the
+%                          folder that contains the Juelich nifti files.
+%                          The default is where the standard FSL
+%                          installation puts them.
+%
+% References:
+%   - Eickhoff et al., A new SPM toolbox for combining probabilistic
+%     cytoarchitectonic maps and functional imaging data. Neuroimage
+%     25(4):1325-35 (2005); 
+%   - Eickhoff et al. Testing anatomically specified hypotheses in 
+%     functional imaging using cytoarchitectonic maps. NeuroImage 32(2): 
+%     570-582 (2006); 
+%   - Eickhoff et al., Assignment of functional activations to probabilistic 
+%     cytoarchitectonic areas revisited. NeuroImage, 36(3): 511-521 (2007))
 
 %% Input parser
 p = inputParser; p.KeepUnmatched = true;
@@ -48,5 +88,8 @@ system(['FSLDIR=/usr/local/fsl; PATH=${FSLDIR}/bin:${PATH}; export FSLDIR PATH; 
 % We will do so using HCP's workbench commands
 system(['bash ', p.Results.workbenchPath, 'wb_command -cifti-create-dense-from-template "', templateFile, '" "', fullfile(maskPath, 'LGN-combined.dscalar.nii'), '" -volume-all "', fullfile(maskPath, 'LGN-combined.nii.gz'), '"']);
 
+
+%% Load the mask
+[ LGNMask ] = loadCIFTI(fullfile(maskPath, 'LGN-combined.dscalar.nii'));
 
 end
