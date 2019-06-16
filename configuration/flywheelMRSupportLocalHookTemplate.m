@@ -39,6 +39,11 @@ switch userID
 end
 
 
+%% Set the workbench command path
+if ismac
+setpref(toolboxName,'wbCommand','/Applications/workbench/bin_macosx64/wb_command');
+end
+
 %% Paths to store flywheel data and scratch space
 if ismac
     % Code to run on Mac plaform
