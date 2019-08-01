@@ -7,28 +7,28 @@ function [attentionEventTimes, eventsRegressor] = getAttentionEventTimes(block, 
 % Description:
 %	Function that takes in files saved out from the OLApproach code and
 %	returns a list of attention event times and an optional attention event
-%	regressor. 
+%	regressor.
 %
 % Inputs:
 %   block                 - block struct saved when running the
 %                           OLApproach_TrialSequenceMR which contains
-%                           attention event information 
+%                           attention event information
 %   responseStruct        - responcestruct saved when running the
 %                           OLApproach_TrialSequenceMR which contains
-%                           trial start information 
-%  
+%                           trial start information
+%
 % Outputs:
 %   attentionEventTimes   - Vector of attention event start times relative to the
-%                           start of the experiment (in ms) 
+%                           start of the experiment (in ms)
 %   eventsRegressor       - A binary regressor coding the start of the
-%                           attention events. The nearest TR is matchin an 
-%                           attention event time is marked as 1. Returned 
+%                           attention events. The nearest TR is matchin an
+%                           attention event time is marked as 1. Returned
 %                           at the same resolution as the timebase. (only if
-%                           the timebase key/value pair is provided) 
+%                           the timebase key/value pair is provided)
 %
 % Optional key/value pairs:
 %   timebase              - Supply a response timebase for creation of a
-%                           regressor of attention events  
+%                           regressor of attention events
 %
 % Examples are provided in the source code.
 %
@@ -57,13 +57,13 @@ for ii = 1:length(responseStruct.events)
     
     if  logical(block(ii).attentionTask.segmentFlag)
         
-        % get the start time of the trial 
+        % get the start time of the trial
         trialStartTime = responseStruct.events(ii).tTrialStart - expStartTime;
         
-        % get the time step 
+        % get the time step
         timeStep = responseStruct.timeStep;
         
-        % get the attention time from start of trial  
+        % get the attention time from start of trial
         attentionStart =  block(ii).attentionTask.theStartBlankIndex.*timeStep + responseStruct.events(ii).trialWaitTime;
         
         % add trial start time to attention time
@@ -75,15 +75,31 @@ for ii = 1:length(responseStruct.events)
 end
 
 % convert to ms
-attentionEventTimes = attentionEventTimes*1000;
+if exist('attentionEventTimes')
+    attentionEventTimes = attentionEventTimes*1000;
+end
+
+% %create single regressor if timebase is provided
+% eventsRegressor = zeros(1,length(p.Results.timebase));
+% if ~isempty(p.Results.timebase)
+%     for jj = 1:length(attentionEventTimes)
+%         index = find( abs(p.Results.timebase - attentionEventTimes(jj)) == min( abs(p.Results.timebase - attentionEventTimes(jj))));
+%         eventsRegressor(index) = 1;
+%     end
+% end
+
 
 % create regressor if timebase is provided
-eventsRegressor = zeros(length(attentionEventTimes),length(p.Results.timebase));
-if ~isempty(p.Results.timebase)
-    for jj = 1:length(attentionEventTimes)
-        index = find( abs(p.Results.timebase - attentionEventTimes(jj)) == min( abs(p.Results.timebase - attentionEventTimes(jj))));
-        eventsRegressor(jj,index:index+round(p.Results.attentionEventDuration/(responseStruct.timeStep*1000))) = 1;
+if exist('attentionEventTimes')
+    eventsRegressor = zeros(length(attentionEventTimes),length(p.Results.timebase));
+    if ~isempty(p.Results.timebase)
+        for jj = 1:length(attentionEventTimes)
+            index = find( abs(p.Results.timebase - attentionEventTimes(jj)) == min( abs(p.Results.timebase - attentionEventTimes(jj))));
+            eventsRegressor(jj,index) = 1;
+        end
     end
+else     
+    eventsRegressor = [];
 end
-    
+
 end
