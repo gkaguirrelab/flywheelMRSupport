@@ -62,8 +62,8 @@ p.parse(filename, varargin{:})
 fullConfounds = tdfread(filename,'\t');
 
 confoundRegressors = [];
-for ii = 1:length(p.UsingDefaults)
-    switch p.UsingDefaults{ii}
+for ii = 1:length(p.Parameters)
+    switch p.Parameters{ii}
         case 'CSF'
             if p.Results.CSF
                 confoundRegressors = [confoundRegressors, fullConfounds.CSF];
