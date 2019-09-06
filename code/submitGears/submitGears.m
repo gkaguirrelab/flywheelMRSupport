@@ -1,4 +1,4 @@
-function submitGears(paramsFileName)
+function submitGears(paramsFileName,varargin)
 % Submits jobs to a flywheel instance based upon a table of parameters
 %
 % Syntax
@@ -16,6 +16,9 @@ function submitGears(paramsFileName)
 %
 %   The routine will decline to re-run a job if a job with the same
 %   analysis label appears on the instance.
+%
+%   key-value pairs may be passed as input to the routine or read from the
+%   params table of the file.
 %
 % Format of the params table:
 %
@@ -107,8 +110,10 @@ p.addParameter('configVals','',@(x)(isempty(x) || ischar(x)));
 tableVarargin = paramsTable{1,1:end};
 % Remove all trailing empty cells
 tableVarargin=tableVarargin(1:find(cellfun(@(x) ~isempty(x),tableVarargin),1,'last'));
+% Combine the tableVarargin with the passed varargin
+comboVarargin = [tableVarargin varargin];
 % Parse
-p.parse(tableVarargin{:});
+p.parse(comboVarargin{:});
 
 % The parameters arrive as char variables from the csv file. We create
 % logical variables out of some of these, and handle the possibility that
