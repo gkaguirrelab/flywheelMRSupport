@@ -149,7 +149,7 @@ allProjects = fw.getAllProjects;
 allGears = fw.getAllGears();
 
 % Find the particular gear we are going to use
-theGearIdx=find(strcmp(cellfun(@(x) x.gear.name,allGears,'UniformOutput',false),p.Results.gearName));
+theGearIdx=find(strcmp(cellfun(@(x) x.gear.name,allGears,'UniformOutput',false),lower(p.Results.gearName)));
 theGearID = allGears{theGearIdx}.id;
 theGearName = allGears{theGearIdx}.gear.name;
 theGearVersion = allGears{theGearIdx}.gear.version;
@@ -166,7 +166,7 @@ for ii = 1:numel(keys)
         configDefault.(keys{ii}) = val.default;
     else
         if verbose
-            fprintf('No default value for %s\n. It must be set prior to execution.', keys{ii});
+            fprintf('No default value for %s. It must be set prior to execution.\n', keys{ii});
         end
     end
 end
@@ -252,9 +252,10 @@ for ii=nParamRows+1:nRows
             allSessions.(thisProjLabel) = fw.getProjectSessions(thisProjID);
         end
         
-        % If this is not a project input, find the matching subject and
-        % session
-        if ~strcmp('project',char(paramsTable{ContainerTypeRow,jj}))
+        % If this is not a project or config input, find the matching
+        % subject and session
+        if ~strcmp('project',char(paramsTable{ContainerTypeRow,jj})) && ...
+            ~strcmp('config',char(paramsTable{ContainerTypeRow,jj}))
             sessionIdx = find(cellfun(@(x) all([strcmp(x.subject.code,entry{1}) strcmp(x.label,entry{2})]),allSessions.(thisProjLabel)));
             if isempty(sessionIdx)
                 error('No matching session and subject for this input entry')
@@ -350,6 +351,17 @@ for ii=nParamRows+1:nRows
                 theType = 'analysis';
                 theContainerLabel = 'analysis_file';
                 
+            case 'config'
+                % Create a variable in memory that is theInputLabel, and
+                % set this variable equal to the entry. First, however,
+                % check to make sure that this new variable won't colide
+                % with a variable name already in memory
+                if exist(theInputLabel,'var')
+                    error('The input label for a config value matches a variable that exists within submitGears');
+                end
+                command = [theInputLabel ' = ' entry{1} ';'];
+                eval(command);
+                
             case 'session'
                 
                 theContainerID = allSessions.(thisProjLabel){sessionIdx}.id;
@@ -410,13 +422,16 @@ for ii=nParamRows+1:nRows
             end
         end
         
-        % Add this input information to the structure
-        inputStem = struct('type', theType,...
-            'id', theContainerID, ...
-            'name', theFileName);
-        inputs.(theInputLabel) = inputStem;
-        inputNotes.(theInputLabel).theContainerLabel = theContainerLabel;
-        inputNotes.(theInputLabel).theContainerType = theContainerType;
+        % If it is not a config container, then it is an input, so add this
+        % input information to the structure
+        if ~strcmp(theContainerType,'config')
+            inputStem = struct('type', theType,...
+                'id', theContainerID, ...
+                'name', theFileName);
+            inputs.(theInputLabel) = inputStem;
+            inputNotes.(theInputLabel).theContainerLabel = theContainerLabel;
+            inputNotes.(theInputLabel).theContainerType = theContainerType;
+        end
     end
     
     
