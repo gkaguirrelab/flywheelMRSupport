@@ -359,9 +359,19 @@ for ii=nParamRows+1:nRows
                 if exist(theInputLabel,'var')
                     error('The input label for a config value matches a variable that exists within submitGears');
                 end
+                
+                % Assmeble a set of commands that will be used to clear
+                % these created variables after this job has been submitted
+                if ~exist('clearSet','var')
+                    clearSet = {};
+                    clearSet{1} = '';
+                end
+                clearSet{end}=['clear ' theInputLabel];
+
+                % Now create the variable
                 command = [theInputLabel ' = ' entry{1} ';'];
                 eval(command);
-                
+                                
             case 'session'
                 
                 theContainerID = allSessions.(thisProjLabel){sessionIdx}.id;
@@ -445,6 +455,14 @@ for ii=nParamRows+1:nRows
         end
     end
     
+    % Clear from memory any variables that were created to hold custom key
+    % values
+    if exist('clearSet','var')
+        for cc=1:length(clearSet)
+            eval(clearSet{cc});
+        end
+        clear clearSet
+    end
     
     %% Assemble Job
     % Create the job body with all the involved files in a struct
