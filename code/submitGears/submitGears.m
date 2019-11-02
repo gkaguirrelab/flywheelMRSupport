@@ -89,6 +89,10 @@ function submitGears(paramsFileName,varargin)
 % Outputs:
 %   none
 %
+% Examples:
+%{
+    submitGears('myFlywheelParams.csv','overwriteExisting','failed')
+%}
 
 
 
@@ -103,7 +107,7 @@ p.addParameter('gearName','hcp-func',@ischar);
 p.addParameter('rootSession','fMRITimeSeries',@ischar);
 p.addParameter('rootSessionID',@(x)(isempty(x) || ischar(x)));
 p.addParameter('verbose','true',@ischar);
-p.addParameter('overwriteExistingAnalysis','false',@ischar);
+p.addParameter('overwriteExisting','never',@ischar);
 p.addParameter('configKeys','',@(x)(isempty(x) || ischar(x)));
 p.addParameter('configVals','',@(x)(isempty(x) || ischar(x)));
 % Grab the first row of the table
@@ -119,7 +123,8 @@ p.parse(comboVarargin{:});
 % logical variables out of some of these, and handle the possibility that
 % the string is in upper case.
 verbose = eval(lower(p.Results.verbose));
-overwriteExistingAnalysis = eval(lower(p.Results.overwriteExistingAnalysis));
+
+overwriteExisting = p.Results.overwriteExisting;
 
 % Define the paramsTable dimensions
 nParamRows = 6; % This is the number of rows that make up the header
@@ -492,22 +497,56 @@ for ii=nParamRows+1:nRows
                     if strcmp(strtrim(analysisLabelParts{2}),strtrim(jobLabelParts{2}))
                         skipFlag = true;
                         priorAnalysisID = allAnalyses{priorAnalysesMatchIdx(mm)}.id;
+                        priorJobID = allAnalyses{priorAnalysesMatchIdx(mm)}.job;
+                        priorJobState = fw.getJob(priorJobID).state;
                     end
                 end
             end
         end
     end
     if skipFlag
-        if verbose && ~overwriteExistingAnalysis
-            fprintf(['The analysis ' theGearName ' is already present for ' subjectName ', ' jobLabel '; skipping.\n']);
+        
+        % Determine if the previous job failed
+        failedFlag = false;
+        if strcmp(priorJobState,'failed')
+            failedFlag = true;
         end
-        if verbose && overwriteExistingAnalysis
-            fprintf(['The analysis ' theGearName ' is already present for ' subjectName ', ' jobLabel '; deleting and re-running.\n']);
-        end
-        if overwriteExistingAnalysis
-            fw.deleteSessionAnalysis(allSessions.(thisProjLabel){sessionIdx}.id,priorAnalysisID);
-        else
-            continue
+        
+        % Handle the overwriteExisting choices
+        switch overwriteExisting
+            case 'never'
+                if verbose
+                    if failedFlag
+                        fprintf(['A failed ' theGearName ' analysis is already present for ' subjectName ', ' jobLabel '; skipping. If you wish to delete and re-run, set the overwriteExisting key to ''failed''.\n']);
+                    else
+                        fprintf(['The analysis ' theGearName ' is already present for ' subjectName ', ' jobLabel '; skipping.\n']);
+                    end
+                end
+                continue
+                
+            case 'failed'
+                if failedFlag
+                    fw.deleteSessionAnalysis(allSessions.(thisProjLabel){sessionIdx}.id,priorAnalysisID);
+                    if verbose
+                        fprintf(['A failed ' theGearName ' analysis was found and deleted for ' subjectName ', ' jobLabel '; re-running.\n']);
+                    end
+                else
+                    fprintf(['The analysis ' theGearName ' is already present for ' subjectName ', ' jobLabel '; skipping.\n']);
+                    continue
+                end
+                
+            case 'all'
+                fw.deleteSessionAnalysis(allSessions.(thisProjLabel){sessionIdx}.id,priorAnalysisID);
+                if verbose
+                    if failedFlag
+                        fprintf(['A failed ' theGearName ' analysis was found and deleted for ' subjectName ', ' jobLabel '; re-running.\n']);
+                    else
+                        fprintf(['The analysis ' theGearName ' is already present for ' subjectName ', ' jobLabel '; deleting and re-running.\n']);
+                    end
+                end
+                
+            otherwise
+                error('Not a valid value for the overwriteExisting key');
         end
     end
     
