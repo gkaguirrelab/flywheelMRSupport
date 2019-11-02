@@ -110,6 +110,7 @@ p.addParameter('verbose','true',@ischar);
 p.addParameter('overwriteExisting','never',@ischar);
 p.addParameter('configKeys','',@(x)(isempty(x) || ischar(x)));
 p.addParameter('configVals','',@(x)(isempty(x) || ischar(x)));
+
 % Grab the first row of the table
 tableVarargin = paramsTable{1,1:end};
 % Remove all trailing empty cells
@@ -124,6 +125,7 @@ p.parse(comboVarargin{:});
 % the string is in upper case.
 verbose = eval(lower(p.Results.verbose));
 
+% Pull out the overwriteExisting variable
 overwriteExisting = p.Results.overwriteExisting;
 
 % Define the paramsTable dimensions
@@ -451,7 +453,14 @@ for ii=nParamRows+1:nRows
     
     
     %% Customize gear configuration
-    configKeys = eval(p.Results.configKeys);
+    charConfigKeys = p.Results.configKeys;
+
+    % Sanitize the config keys for forbiden characters
+    charConfigKeys = strrep(charConfigKeys,'-','0x2D');
+
+    % Obtain the cell array
+    configKeys = eval(charConfigKeys);
+    
     configVals = eval(p.Results.configVals);
     config = configDefault;
     if ~isempty(configKeys)
