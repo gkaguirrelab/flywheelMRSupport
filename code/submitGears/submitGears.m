@@ -348,7 +348,21 @@ for ii=nParamRows+1:nRows
                 
                 % Find which of the analyses contains the target file
                 targetLabelParts = strsplit(targetLabel,'/');
-                analysisIdx = find(strcmp(cellfun(@(x) x.gearInfo.name,allAnalyses,'UniformOutput',false),targetLabelParts{1}));
+                
+                gearName = targetLabelParts{1};
+                gearModel = '';
+                if length(strsplit(gearName,'.'))>1
+                    gearNameParts = strsplit(gearName,'.');
+                    gearName = gearNameParts{1};
+                    gearModel = gearNameParts{2};                    
+                end
+                fileName = targetLabelParts{2};
+                
+                analysisIdx = find(strcmp(cellfun(@(x) x.gearInfo.name,allAnalyses,'UniformOutput',false),gearName));                
+                if ~isempty(gearModel)
+                    modelIdx = cellfun(@(x) strcmp(fw.getJob(x.job).config.config.modelClass,gearModel),allAnalyses(analysisIdx));
+                    analysisIdx = analysisIdx(modelIdx);
+                end
                 whichAnalysis = find(cellfun(@(y) ~isempty(find(cellfun(@(x) (endsWith(x.name,targetLabelParts{2})),y.files))),allAnalyses(analysisIdx)));
                 
                 % Get this file
