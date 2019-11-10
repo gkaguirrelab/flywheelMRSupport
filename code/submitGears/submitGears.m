@@ -152,14 +152,22 @@ allProjects = fw.getAllProjects;
 
 
 %% Construct the gear configuration
-% Get all the gears
-allGears = fw.getAllGears();
+% Find the gear we are going to use
+filterString = ['gear.name=' lower(p.Results.gearName)];
+theGear = fw.getAllGears('filter',filterString);
 
-% Find the particular gear we are going to use
-theGearIdx=find(strcmp(cellfun(@(x) x.gear.name,allGears,'UniformOutput',false),lower(p.Results.gearName)));
-theGearID = allGears{theGearIdx}.id;
-theGearName = allGears{theGearIdx}.gear.name;
-theGearVersion = allGears{theGearIdx}.gear.version;
+if isempty(theGear)
+    error(['Cannot find the gear "' p.Results.gearName '" in Flywheel'])
+end
+if length(theGear)>1
+    error(['There is more than one gear named "' p.Results.gearName '" in Flywheel'])
+end
+theGear = theGear{1};
+
+% Get the info for the gear
+theGearID = theGear.id;
+theGearName = theGear.gear.name;
+theGearVersion = theGear.gear.version;
 
 % Build the config params. Read the config to set the defaults and edit
 % required ones
