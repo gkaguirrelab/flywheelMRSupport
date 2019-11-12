@@ -13,7 +13,7 @@ function [attentionEventTimes, eventsRegressor] = getAttentionEventTimes(block, 
 %   block                 - block struct saved when running the
 %                           OLApproach_TrialSequenceMR which contains
 %                           attention event information
-%   responseStruct        - responcestruct saved when running the
+%   responseStruct        - responseStruct saved when running the
 %                           OLApproach_TrialSequenceMR which contains
 %                           trial start information
 %
@@ -29,6 +29,12 @@ function [attentionEventTimes, eventsRegressor] = getAttentionEventTimes(block, 
 % Optional key/value pairs:
 %   timebase              - Supply a response timebase for creation of a
 %                           regressor of attention events
+%   numRegressors         - (string) either 'single' or 'multi'. this will
+%                           determine the number of regressors retuened.
+%                           either each attentional event is returned
+%                           as an seperate column ('multi') or all on one
+%                           regressor ('single').
+%
 %
 % Examples are provided in the source code.
 %
@@ -45,13 +51,14 @@ p = inputParser; p.KeepUnmatched = false;
 p.addRequired('block', @isstruct);
 p.addRequired('responseStruct', @isstruct);
 p.addParameter('timebase',[], @isnumeric);
-p.addParameter('attentionEventDuration',[], @isnumeric);
+p.addParameter('numRegressors','single',@isstr)
 p.parse(block,responseStruct, varargin{:})
 
 % get the system start time of the experiment
 expStartTime = responseStruct.tBlockStart;
 
 % loop over the trials
+attentionEventTimes = [];
 count = 1;
 for ii = 1:length(responseStruct.events)
     
@@ -75,31 +82,32 @@ for ii = 1:length(responseStruct.events)
 end
 
 % convert to ms
-if exist('attentionEventTimes')
-    attentionEventTimes = attentionEventTimes*1000;
-end
-
-% %create single regressor if timebase is provided
-% eventsRegressor = zeros(1,length(p.Results.timebase));
-% if ~isempty(p.Results.timebase)
-%     for jj = 1:length(attentionEventTimes)
-%         index = find( abs(p.Results.timebase - attentionEventTimes(jj)) == min( abs(p.Results.timebase - attentionEventTimes(jj))));
-%         eventsRegressor(index) = 1;
-%     end
-% end
-
+attentionEventTimes = attentionEventTimes*1000;
 
 % create regressor if timebase is provided
-if exist('attentionEventTimes')
-    eventsRegressor = zeros(length(attentionEventTimes),length(p.Results.timebase));
-    if ~isempty(p.Results.timebase)
-        for jj = 1:length(attentionEventTimes)
-            index = find( abs(p.Results.timebase - attentionEventTimes(jj)) == min( abs(p.Results.timebase - attentionEventTimes(jj))));
-            eventsRegressor(jj,index) = 1;
+if strcmp(p.Results.numRegressors,'single')
+    if exist('attentionEventTimes')
+        eventsRegressor = zeros(size(p.Results.timebase));
+        if ~isempty(p.Results.timebase)
+            for jj = 1:length(attentionEventTimes)
+                index = find( abs(p.Results.timebase - attentionEventTimes(jj)) == min( abs(p.Results.timebase - attentionEventTimes(jj))));
+                eventsRegressor(index) = 1;
+            end
         end
+    else
+        eventsRegressor = [];
     end
-else     
-    eventsRegressor = [];
-end
-
+elseif strcmp(p.Results.numRegressors,'multi')
+    if exist('attentionEventTimes')
+        eventsRegressor = zeros(length(attentionEventTimes),length(p.Results.timebase));
+        if ~isempty(p.Results.timebase)
+            for jj = 1:length(attentionEventTimes)
+                index = find( abs(p.Results.timebase - attentionEventTimes(jj)) == min( abs(p.Results.timebase - attentionEventTimes(jj))));
+                eventsRegressor(jj,index) = 1;
+            end
+        end
+    else
+        eventsRegressor = [];
+    end
+    
 end
