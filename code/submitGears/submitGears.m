@@ -373,6 +373,12 @@ for ii=nParamRows+1:nRows
                     modelIdx = cellfun(@(x) strcmp(fw.getJob(x.job).config.config.modelClass,gearModel),allAnalyses(analysisIdx));
                     analysisIdx = analysisIdx(modelIdx);
                 end
+                
+                % Remove from the list of analyses any which do not have
+                % any output files
+                hasOutputFiles = cellfun(@(x) ~isempty(x.files),allAnalyses(analysisIdx));
+                analysisIdx = analysisIdx(hasOutputFiles);
+                
                 whichAnalysis = find(cellfun(@(y) ~isempty(find(cellfun(@(x) (endsWith(x.name,targetLabelParts{2})),y.files))),allAnalyses(analysisIdx)));
                 
                 % Get this file
