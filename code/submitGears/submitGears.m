@@ -397,7 +397,7 @@ for ii=nParamRows+1:nRows
                     clearSet = {};
                     clearSet{1} = '';
                 end
-                clearSet{end}=['clear ' theInputLabel];
+                clearSet{end+1}=['clear ' theInputLabel];
 
                 % Now create the variable
                 command = [theInputLabel ' = ' entry{1} ';'];
