@@ -107,6 +107,7 @@ p.addParameter('gearName','hcp-func',@ischar);
 p.addParameter('rootSession','fMRITimeSeries',@ischar);
 p.addParameter('rootSessionID',@(x)(isempty(x) || ischar(x)));
 p.addParameter('verbose','true',@ischar);
+p.addParameter('unsetDefaultValueWarning','false',@ischar);
 p.addParameter('overwriteExisting','never',@ischar);
 p.addParameter('configKeys','',@(x)(isempty(x) || ischar(x)));
 p.addParameter('configVals','',@(x)(isempty(x) || ischar(x)));
@@ -124,6 +125,7 @@ p.parse(comboVarargin{:});
 % logical variables out of some of these, and handle the possibility that
 % the string is in upper case.
 verbose = eval(lower(p.Results.verbose));
+unsetDefaultValueWarning = eval(lower(p.Results.unsetDefaultValueWarning));
 
 % Pull out the overwriteExisting variable
 overwriteExisting = p.Results.overwriteExisting;
@@ -180,7 +182,7 @@ for ii = 1:numel(keys)
     if isfield(val, 'default')
         configDefault.(keys{ii}) = val.default;
     else
-        if verbose
+        if unsetDefaultValueWarning
             fprintf('No default value for %s. It must be set prior to execution.\n', keys{ii});
         end
     end
