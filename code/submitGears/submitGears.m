@@ -370,7 +370,7 @@ for ii=nParamRows+1:nRows
                 
                 analysisIdx = find(strcmp(cellfun(@(x) x.gearInfo.name,allAnalyses,'UniformOutput',false),gearName));                
                 if ~isempty(gearModel)
-                    modelIdx = cellfun(@(x) strcmp(fw.getJob(x.job).config.config.modelClass,gearModel),allAnalyses(analysisIdx));
+                    modelIdx = cellfun(@(x) strcmp(fw.getJobDetail(x.job).config.config.modelClass,gearModel),allAnalyses(analysisIdx));
                     analysisIdx = analysisIdx(modelIdx);
                 end
                 
@@ -537,7 +537,7 @@ for ii=nParamRows+1:nRows
                         skipFlag = true;
                         priorAnalysisID = allAnalyses{priorAnalysesMatchIdx(mm)}.id;
                         priorJobID = allAnalyses{priorAnalysesMatchIdx(mm)}.job;
-                        priorJobState = fw.getJob(priorJobID).state;
+                        priorJobState = fw.getJobDetail(priorJobID).state;
                     end
                 end
             end
