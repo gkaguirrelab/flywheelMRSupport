@@ -98,7 +98,7 @@ function submitGears(paramsFileName,varargin)
 
 %% Load and parse the params table
 % This identifies the subjects and inputs to be processed
-paramsTable = readtable(paramsFileName,'ReadVariableNames',false,'FileType','text','Delimiter','comma');
+paramsTable = readtable(paramsFileName,'ReadVariableNames',false,'FileType','text','Delimiter','comma','Format','auto');
 
 % Parse the table header
 p = inputParser; p.KeepUnmatched = false;
