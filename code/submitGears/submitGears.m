@@ -106,6 +106,7 @@ p.addParameter('projectLabel','',@(x)(isempty(x) || ischar(x)));
 p.addParameter('gearName','hcp-func',@ischar);
 p.addParameter('rootSession','fMRITimeSeries',@ischar);
 p.addParameter('rootSessionID',@(x)(isempty(x) || ischar(x)));
+p.addParameter('tags',{''},@(x)(isempty(x) || iscell(x)));
 p.addParameter('verbose','true',@ischar);
 p.addParameter('unsetDefaultValueWarning','false',@ischar);
 p.addParameter('overwriteExisting','never',@ischar);
@@ -508,10 +509,16 @@ for ii=nParamRows+1:nRows
         clear clearSet
     end
     
+    % Grab the tags. Need to place it again in a cell array so that the
+    % subsequent struct command does not strip this away.
+    tags = {p.Results.tags};
+    
+    
     %% Assemble Job
     % Create the job body with all the involved files in a struct
     thisJob = struct('gearId', theGearID, ...
         'inputs', inputs, ...
+        'tags', tags, ...
         'config', config);
     
     
