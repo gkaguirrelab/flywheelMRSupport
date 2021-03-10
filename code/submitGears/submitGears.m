@@ -380,7 +380,16 @@ for ii=nParamRows+1:nRows
                 hasOutputFiles = cellfun(@(x) ~isempty(x.files),allAnalyses(analysisIdx));
                 analysisIdx = analysisIdx(hasOutputFiles);
                 
+                % Which analysis has the files we want?
                 whichAnalysis = find(cellfun(@(y) ~isempty(find(cellfun(@(x) (endsWith(x.name,targetLabelParts{2})),y.files))),allAnalyses(analysisIdx)));
+                
+                % If there is more than one analysis, figure out which one
+                % is the most recent
+                if length(whichAnalysis)>1
+                    [~,idx]=max(cellfun(@(x) x.created,allAnalyses(analysisIdx(whichAnalysis))));
+                    whichAnalysis = whichAnalysis(idx);
+                    warning('Using the most recent analysis');
+                end
                 
                 % Get this file
                 fileIdx = find(cellfun(@(x) (endsWith(x.name,targetLabelParts{2})),allAnalyses{analysisIdx(whichAnalysis)}.files));
@@ -601,6 +610,11 @@ for ii=nParamRows+1:nRows
     [newAnalysisID, ~] = fw.addSessionAnalysis(rootSessionID, body);
     
     
+    %% Add the analysis ID as a notes entry
+    successNote = ['Submitted ' subjectName ' [' newAnalysisID '] - ' jobLabel ];
+    fw.addAnalysisNote(newAnalysisID,sprintf(successNote));
+
+    
     %% Add a notes entry to the analysis object
     note = ['InputLabel  -+-  ContainerType -+- ContainerLabel  -+-  FileName\n' ...
             '----------------------------------------------------------------\n'];
@@ -613,7 +627,7 @@ for ii=nParamRows+1:nRows
     
     %% Report the event
     if verbose
-        fprintf(['Submitted ' subjectName ' [' newAnalysisID '] - ' jobLabel '\n']);
+        fprintf([successNote '\n']);
     end
 end % loop over rows of the table
 
