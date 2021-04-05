@@ -104,6 +104,7 @@ paramsTable = readtable(paramsFileName,'ReadVariableNames',false,'FileType','tex
 p = inputParser; p.KeepUnmatched = false;
 p.addParameter('projectLabel','',@(x)(isempty(x) || ischar(x)));
 p.addParameter('gearName','hcp-func',@ischar);
+p.addParameter('versionNum','',@(x)(isempty(x) || ischar(x)));
 p.addParameter('rootSession','fMRITimeSeries',@ischar);
 p.addParameter('rootSessionID',@(x)(isempty(x) || ischar(x)));
 p.addParameter('tags',{''},@(x)(isempty(x) || iscell(x)));
@@ -156,8 +157,13 @@ allProjects = fw.getAllProjects;
 
 %% Construct the gear configuration
 % Find the gear we are going to use
-filterString = ['gear.name=' lower(p.Results.gearName)];
-theGear = fw.getAllGears('filter',filterString);
+if ~isempty(p.Results.versionNum)
+    filterString = ['gear.name=' lower(p.Results.gearName) ',gear.version=gear.name=' lower(p.Results.gearName) ',gear.version=' lower(p.Results.versionNum)];
+    theGear = fw.getAllGears('allVersions', 'true', 'filter', filterString);
+else
+    filterString = ['gear.name=' lower(p.Results.gearName)];
+    theGear = fw.getAllGears('filter',filterString);
+end
 
 if isempty(theGear)
     error(['Cannot find the gear "' p.Results.gearName '" in Flywheel'])
@@ -307,6 +313,9 @@ for ii=nParamRows+1:nRows
                     theContainerID = allAcqs{acqIdx}.id;
                     theContainerLabel = allAcqs{acqIdx}.label;
                 else
+                                        % Filter any acquitions with no files
+                    notEmptyIdx = cellfun(@(x) ~isempty(x.files),allAcqs);
+                    allAcqs = allAcqs(notEmptyIdx);
                     % Try to find an acquisition that matches the input
                     % label and contains the specified AcqFileType. Unless
                     % told to use exact matching, trim off leading and
