@@ -158,12 +158,11 @@ allProjects = fw.getAllProjects;
 %% Construct the gear configuration
 % Find the gear we are going to use
 if ~isempty(p.Results.versionNum)
-    filterString = ['gear.name=' lower(p.Results.gearName) ',gear.version=gear.name=' lower(p.Results.gearName) ',gear.version=' lower(p.Results.versionNum)];
-    theGear = fw.getAllGears('allVersions', 'true', 'filter', filterString);
+    filterString = ['gears/' lower(p.Results.gearName) '/' lower(p.Results.versionNum)];
 else
-    filterString = ['gear.name=' lower(p.Results.gearName)];
-    theGear = fw.getAllGears('filter',filterString);
+    filterString = ['gears/' lower(p.Results.gearName)];
 end
+theGear = fw.lookup(filterString);
 
 if isempty(theGear)
     error(['Cannot find the gear "' p.Results.gearName '" in Flywheel'])
@@ -171,7 +170,7 @@ end
 if length(theGear)>1
     error(['There is more than one gear named "' p.Results.gearName '" in Flywheel'])
 end
-theGear = theGear{1};
+
 
 % Get the info for the gear
 theGearID = theGear.id;
