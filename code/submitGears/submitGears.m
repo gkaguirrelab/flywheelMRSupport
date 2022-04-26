@@ -42,6 +42,11 @@ function submitGears(paramsFileName,varargin)
 %                           types to the gear. The session that is the
 %                           source of this inout type is then the session
 %                           in which the analysis will be placed.
+%  'tags'                 - Cell array of char vectors. These are tags that
+%                           are passed to the Flywheel job scheduler. A
+%                           common usage is to pass the identity of a
+%                           better-equipped virtual machine. E.g.:
+%                               {'vm-n1-highmem-8_disk-1500G_swap-60G'}
 %  'verbose'              - Char vector of the form "true" or "false".
 %  'configKeys'           - A cell array that contans the char vectors of
 %                           the configuration labels for the gear.
@@ -158,11 +163,11 @@ allProjects = fw.getAllProjects;
 %% Construct the gear configuration
 % Find the gear we are going to use
 if ~isempty(p.Results.versionNum)
-    filterString = ['gears/' lower(p.Results.gearName) '/' lower(p.Results.versionNum)];
+    gearFilterString = ['gears/' lower(p.Results.gearName) '/' lower(p.Results.versionNum)];
 else
-    filterString = ['gears/' lower(p.Results.gearName)];
+    gearFilterString = ['gears/' lower(p.Results.gearName)];
 end
-theGear = fw.lookup(filterString);
+theGear = fw.lookup(gearFilterString);
 
 if isempty(theGear)
     error(['Cannot find the gear "' p.Results.gearName '" in Flywheel'])
@@ -615,12 +620,13 @@ for ii=nParamRows+1:nRows
     
     %% Run
     body = struct('label', jobLabel, 'job', thisJob);
-    [newAnalysisID, ~] = fw.addSessionAnalysis(rootSessionID, body);
+    newAnalysisID = fw.addSessionAnalysis(rootSessionID, body);
     
     
     %% Add the analysis ID as a notes entry
     successNote = ['Submitted ' subjectName ' [' newAnalysisID '] - ' jobLabel ];
-    fw.addAnalysisNote(newAnalysisID,sprintf(successNote));
+    newAnalysisObj = fw.get(newAnalysisID);
+    newAnalysisObj.addNote(sprintf(successNote));
 
     
     %% Add a notes entry to the analysis object
@@ -631,7 +637,7 @@ for ii=nParamRows+1:nRows
         newLine = [inputFieldNames{nn} '  -+-  ' inputNotes.(inputFieldNames{nn}).theContainerType '  -+-  ' inputNotes.(inputFieldNames{nn}).theContainerLabel '  -+-  ' inputs.(inputFieldNames{nn}).name '\n'];
         note = [note newLine];
     end
-    fw.addAnalysisNote(newAnalysisID,sprintf(note));
+    newAnalysisID.addNote(sprintf(note));
     
     %% Report the event
     if verbose
