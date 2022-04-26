@@ -226,7 +226,7 @@ for ii=nParamRows+1:nRows
     subjectName = char(paramsTable{ii,1});
     
     % Create an empty inputs struct
-    inputs = struct();
+    inputs = {};
     
     %% Loop through the inputs 
     for jj=nParamCols+1:nInputCols
@@ -495,10 +495,9 @@ for ii=nParamRows+1:nRows
         % If it is not a config container, then it is an input, so add this
         % input information to the structure
         if ~strcmp(theContainerType,'config')
-            inputStem = struct('type', theType,...
-                'id', theContainerID, ...
-                'name', theFileName);
-            inputs.(theInputLabel) = inputStem;
+            theContainerWithInput = fw.get(theContainerID);
+            theInputFileObject = theContainerWithInput.getFile(theFileName);
+            inputs{end+1} = {theInputLabel,theInputFileObject};
             inputNotes.(theInputLabel).theContainerLabel = theContainerLabel;
             inputNotes.(theInputLabel).theContainerType = theContainerType;
         end
@@ -537,13 +536,7 @@ for ii=nParamRows+1:nRows
     
     
     %% Assemble Job
-    % Create the job body with all the involved files in a struct
-    thisJob = struct('gearId', theGearID, ...
-        'inputs', inputs, ...
-        'tags', tags, ...
-        'config', config);
-    
-    
+        
     %% Assemble analysis label
     jobLabel = [theGearName ' v' theGearVersion ' [' analysisSubmissionTag '] - ' char(datetime('now','TimeZone','local','Format','yyyy-MM-dd HH:mm'))];
     
@@ -619,25 +612,24 @@ for ii=nParamRows+1:nRows
     end
     
     %% Run
-    body = struct('label', jobLabel, 'job', thisJob);
-    newAnalysisID = fw.addSessionAnalysis(rootSessionID, body);
-    
+    theSessionDestination = fw.get(rootSessionID);
+    newAnalysisID = theGear.run('analysisLabel',jobLabel,'inputs',inputs,'config', config,'destination',theSessionDestination);
     
     %% Add the analysis ID as a notes entry
     successNote = ['Submitted ' subjectName ' [' newAnalysisID '] - ' jobLabel ];
-    newAnalysisObj = fw.get(newAnalysisID);
-    newAnalysisObj.addNote(sprintf(successNote));
-
+    theJob = fw.getJob(newAnalysisID);
+    theAnalysis = fw.getAnalysis(theJob.destination.id);
+    theAnalysis.addNote(successNote);
     
-    %% Add a notes entry to the analysis object
+    %% Add a table of inputs as a note
     note = ['InputLabel  -+-  ContainerType -+- ContainerLabel  -+-  FileName\n' ...
             '----------------------------------------------------------------\n'];
-    inputFieldNames = fieldnames(inputs);
+    inputFieldNames = fieldnames(inputNotes);
     for nn = 1:numel(inputFieldNames)
-        newLine = [inputFieldNames{nn} '  -+-  ' inputNotes.(inputFieldNames{nn}).theContainerType '  -+-  ' inputNotes.(inputFieldNames{nn}).theContainerLabel '  -+-  ' inputs.(inputFieldNames{nn}).name '\n'];
+        newLine = [inputFieldNames{nn} '  -+-  ' inputNotes.(inputFieldNames{nn}).theContainerType '  -+-  ' inputNotes.(inputFieldNames{nn}).theContainerLabel '  -+-  ' inputs{nn}{2}.name '\n'];
         note = [note newLine];
     end
-    newAnalysisID.addNote(sprintf(note));
+    theAnalysis.addNote(sprintf(note));
     
     %% Report the event
     if verbose
