@@ -227,6 +227,9 @@ for ii=nParamRows+1:nRows
     
     % Create an empty inputs struct
     inputs = {};
+
+    % Set the input notes to empty
+    inputNotes = [];
     
     %% Loop through the inputs 
     for jj=nParamCols+1:nInputCols
