@@ -616,12 +616,12 @@ for ii=nParamRows+1:nRows
     
     %% Run
     theSessionDestination = fw.get(rootSessionID);
-    newAnalysisID = theGear.run('analysisLabel',jobLabel,'inputs',inputs,'config', config,'destination',theSessionDestination);
+    newJobID = theGear.run('analysisLabel',jobLabel,'inputs',inputs,'config', config,'destination',theSessionDestination);
     
     %% Add the analysis ID as a notes entry
-    successNote = ['Submitted ' subjectName ' [' newAnalysisID '] - ' jobLabel ];
-    theJob = fw.getJob(newAnalysisID);
+    theJob = fw.getJob(newJobID);
     theAnalysis = fw.getAnalysis(theJob.destination.id);
+    successNote = ['Submitted ' subjectName ' [' theAnalysis.id '] - ' jobLabel ];
     theAnalysis.addNote(successNote);
     
     %% Add a table of inputs as a note
