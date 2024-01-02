@@ -112,7 +112,7 @@ p.addParameter('gearName','hcp-func',@ischar);
 p.addParameter('versionNum','',@(x)(isempty(x) || ischar(x)));
 p.addParameter('rootSession','fMRITimeSeries',@ischar);
 p.addParameter('rootSessionID',@(x)(isempty(x) || ischar(x)));
-p.addParameter('tags',{''},@(x)(isempty(x) || iscell(x)));
+p.addParameter('tags',{},@(x)(isempty(x) || iscell(x)));
 p.addParameter('verbose','true',@ischar);
 p.addParameter('unsetDefaultValueWarning','false',@ischar);
 p.addParameter('overwriteExisting','never',@ischar);
