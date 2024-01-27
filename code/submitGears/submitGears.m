@@ -205,7 +205,7 @@ allSessions = struct();
 
 %% Loop through jobs
 for ii=nParamRows+1:nRows
-    
+
     % Check if this row is empty. If so, continue
     if isempty(char(paramsTable{ii,1}))
         continue
@@ -215,33 +215,33 @@ for ii=nParamRows+1:nRows
     if strcmp(char(paramsTable{ii,1}),'stop')
         return
     end
-    
+
     % Set the analysisSubmissionTag to empty
     analysisSubmissionTag = [];
-    
-    % Set the rootSessionID to empty    
+
+    % Set the rootSessionID to empty
     rootSessionID = [];
-    
+
     % Get the subject name
     subjectName = char(paramsTable{ii,1});
-    
+
     % Create an empty inputs struct
     inputs = {};
 
     % Set the input notes to empty
     inputNotes = [];
-    
-    %% Loop through the inputs 
+
+    %% Loop through the inputs
     for jj=nParamCols+1:nInputCols
-        
+
         % If the entry is empty, skip this input
         if isempty(char(paramsTable{ii,jj}))
             continue
         end
-        
+
         % Get the input label
         theInputLabel=char(paramsTable{InputsRow,jj});
-        
+
         % Get the container type
         theContainerType=char(paramsTable{ContainerTypeRow,jj});
 
@@ -277,16 +277,16 @@ for ii=nParamRows+1:nRows
             thisProjLabel = allProjects{projIdx}.label;
             entry = entry(2:end);
         end
-        
+
         % Get the list of sessions associated with this project label
         if ~isfield(allSessions,thisProjLabel)
             allSessions.(thisProjLabel) = fw.getProjectSessions(thisProjID);
         end
-        
+
         % If this is not a project or config input, find the matching
         % subject and session
         if ~strcmp('project',char(paramsTable{ContainerTypeRow,jj})) && ...
-            ~strcmp('config',char(paramsTable{ContainerTypeRow,jj}))
+                ~strcmp('config',char(paramsTable{ContainerTypeRow,jj}))
             sessionIdx = find(cellfun(@(x) all([strcmp(x.subject.code,entry{1}) strcmp(x.label,entry{2})]),allSessions.(thisProjLabel)));
             if isempty(sessionIdx)
                 error('No matching session and subject for this input entry')
@@ -295,53 +295,61 @@ for ii=nParamRows+1:nRows
                 error('More than one matching session and subject for this input entry')
             end
         end
-        
+
         % Switch on the container type that holds the target file
         switch theContainerType
             case 'acquisition'
                 % Obtain the set of acquisitions for the matching session
                 allAcqs = fw.getSessionAcquisitions(allSessions.(thisProjLabel){sessionIdx}.id);
-                
+
                 % Check to see if the acquisition name is specified. If not,
                 % use the default
                 if length(entry)>=3
-                    targetLabel = strjoin(entry(3:end),'/');
+                    targetLabel = entry(3);
                 else
                     targetLabel = char(paramsTable{DefaultLabelRow,jj});
                 end
-                
+
+                % Try to find an acquisition that matches the input
+                % label and contains the specified AcqFileType. Unless
+                % told to use exact matching, trim off leading and
+                % trailing whitespace, as the stored label in flywheel
+                % sometimes has a trailing space. Also, use a case
+                % insensitive match.
+                if logical(str2double(char(paramsTable{ExactStringMatchRow,jj})))
+                    labelMatchIdx = cellfun(@(x) strcmp(x.label,targetLabel),allAcqs);
+                else
+                    labelMatchIdx = cellfun(@(x) strcmpi(strtrim(x.label),strtrim(targetLabel)),allAcqs);
+                end
+
                 % If a file entry was specified, go
                 % find that.
                 if length(entry)==4
                     % We are given the name of the file
                     theFileName = entry{4};
                     % Find the acquisition ID
-                    acqIdx = find(cellfun(@(x) sum(cellfun(@(y) strcmp(y.name,theFileName),x.files)),allAcqs));
+                    isFileNameMatchIdx = cellfun(@(x) sum(cellfun(@(y) strcmp(y.name,theFileName),x.files)),allAcqs);
+                    acqIdx = logical(labelMatchIdx .* isFileNameMatchIdx);
+                else
+                    % Filter any acquitions with no files
+                    notEmptyIdx = cellfun(@(x) ~isempty(x.files),allAcqs);
+                    allAcqs = allAcqs(notEmptyIdx);
+                    isFileTypeMatchIdx = cellfun(@(x) any(cellfun(@(y) strcmp(y.type,paramsTable{FileSuffixRow,jj}),x.files)),allAcqs);
+                    acqIdx = logical(labelMatchIdx .* isFileTypeMatchIdx);
+                end
+
+                % Check if we have found a file
+                if ~any(acqIdx)
+                    error('No matching acquisition for this input entry')
+                end
+                if sum(acqIdx)>1
+                    error('More than one matching acquisition for this input entry')
+                end
+
+                if length(entry)==4
                     theContainerID = allAcqs{acqIdx}.id;
                     theContainerLabel = allAcqs{acqIdx}.label;
                 else
-                                        % Filter any acquitions with no files
-                    notEmptyIdx = cellfun(@(x) ~isempty(x.files),allAcqs);
-                    allAcqs = allAcqs(notEmptyIdx);
-                    % Try to find an acquisition that matches the input
-                    % label and contains the specified AcqFileType. Unless
-                    % told to use exact matching, trim off leading and
-                    % trailing whitespace, as the stored label in flywheel
-                    % sometimes has a trailing space. Also, use a case
-                    % insensitive match.
-                    if logical(str2double(char(paramsTable{ExactStringMatchRow,jj})))
-                        labelMatchIdx = cellfun(@(x) strcmp(x.label,targetLabel),allAcqs);
-                    else
-                        labelMatchIdx = cellfun(@(x) strcmpi(strtrim(x.label),strtrim(targetLabel)),allAcqs);
-                    end
-                    isFileTypeMatchIdx = cellfun(@(x) any(cellfun(@(y) strcmp(y.type,paramsTable{FileSuffixRow,jj}),x.files)),allAcqs);
-                    acqIdx = logical(labelMatchIdx .* isFileTypeMatchIdx);
-                    if ~any(acqIdx)
-                        error('No matching acquisition for this input entry')
-                    end
-                    if sum(acqIdx)>1
-                        error('More than one matching acquisition for this input entry')
-                    end
                     % We have a match. Re-find the specified file
                     theFileTypeMatchIdx = find(cellfun(@(y) strcmp(y.type,paramsTable{FileSuffixRow,jj}),allAcqs{acqIdx}.files));
                     % Check for an error condition
@@ -358,13 +366,14 @@ for ii=nParamRows+1:nRows
                     theFileName = allAcqs{acqIdx}.files{theFileTypeMatchIdx}.name;
                     theContainerLabel = allAcqs{acqIdx}.label;
                 end
+
                 theType = 'acquisition';
-                
+
             case 'analysis'
-                
+
                 % Get the set of analyses for this session
                 allAnalyses=fw.getSessionAnalyses(allSessions.(thisProjLabel){sessionIdx}.id);
-                
+
                 % Check to see if the analysis name was specified. If not,
                 % use the default
                 if length(entry)>=3
@@ -372,33 +381,33 @@ for ii=nParamRows+1:nRows
                 else
                     targetLabel = char(paramsTable{DefaultLabelRow,jj});
                 end
-                
+
                 % Find which of the analyses contains the target file
                 targetLabelParts = strsplit(targetLabel,'/');
-                
+
                 gearName = targetLabelParts{1};
                 gearModel = '';
                 if length(strsplit(gearName,'.'))>1
                     gearNameParts = strsplit(gearName,'.');
                     gearName = gearNameParts{1};
-                    gearModel = gearNameParts{2};                    
+                    gearModel = gearNameParts{2};
                 end
                 fileName = targetLabelParts{2};
-                
-                analysisIdx = find(strcmp(cellfun(@(x) x.gearInfo.name,allAnalyses,'UniformOutput',false),gearName));                
+
+                analysisIdx = find(strcmp(cellfun(@(x) x.gearInfo.name,allAnalyses,'UniformOutput',false),gearName));
                 if ~isempty(gearModel)
                     modelIdx = cellfun(@(x) strcmp(fw.getJobDetail(x.job).config.config.modelClass,gearModel),allAnalyses(analysisIdx));
                     analysisIdx = analysisIdx(modelIdx);
                 end
-                
+
                 % Remove from the list of analyses any which do not have
                 % any output files
                 hasOutputFiles = cellfun(@(x) ~isempty(x.files),allAnalyses(analysisIdx));
                 analysisIdx = analysisIdx(hasOutputFiles);
-                
+
                 % Which analysis has the files we want?
                 whichAnalysis = find(cellfun(@(y) ~isempty(find(cellfun(@(x) (endsWith(x.name,targetLabelParts{2})),y.files))),allAnalyses(analysisIdx)));
-                
+
                 % If there is more than one analysis, figure out which one
                 % is the most recent
                 if length(whichAnalysis)>1
@@ -406,14 +415,14 @@ for ii=nParamRows+1:nRows
                     whichAnalysis = whichAnalysis(idx);
                     warning('Using the most recent analysis');
                 end
-                
+
                 % Get this file
                 fileIdx = find(cellfun(@(x) (endsWith(x.name,targetLabelParts{2})),allAnalyses{analysisIdx(whichAnalysis)}.files));
                 theContainerID = allAnalyses{analysisIdx(whichAnalysis)}.id;
                 theFileName = allAnalyses{analysisIdx(whichAnalysis)}.files{fileIdx}.name;
                 theType = 'analysis';
                 theContainerLabel = 'analysis_file';
-                
+
             case 'config'
                 % Create a variable in memory that is theInputLabel, and
                 % set this variable equal to the entry. First, however,
@@ -422,7 +431,7 @@ for ii=nParamRows+1:nRows
                 if exist(theInputLabel,'var')
                     error('The input label for a config value matches a variable that exists within submitGears');
                 end
-                
+
                 % Assmeble a set of commands that will be used to clear
                 % these created variables after this job has been submitted
                 if ~exist('clearSet','var')
@@ -434,15 +443,15 @@ for ii=nParamRows+1:nRows
                 % Now create the variable
                 command = [theInputLabel ' = ' entry{1} ';'];
                 eval(command);
-                                
+
             case 'session'
-                
+
                 theContainerID = allSessions.(thisProjLabel){sessionIdx}.id;
                 theContainerLabel = allSessions.(thisProjLabel){sessionIdx}.label;
                 if isempty(allSessions.(thisProjLabel){sessionIdx}.files)
                     error('No session file for this entry')
                 end
-                
+
                 % Check to see if the session file name is specified. If
                 % not, use the default
                 if length(entry)>=3
@@ -450,7 +459,7 @@ for ii=nParamRows+1:nRows
                 else
                     targetLabel = char(paramsTable{DefaultLabelRow,jj});
                 end
-                
+
                 % Find the file
                 fileIdx = find(strcmp(cellfun(@(x) x.name,allSessions.(thisProjLabel){sessionIdx}.files,'UniformOutput',false),targetLabel));
                 if isempty(fileIdx)
@@ -458,23 +467,23 @@ for ii=nParamRows+1:nRows
                 end
                 theFileName = allSessions.(thisProjLabel){sessionIdx}.files{fileIdx}.name;
                 theType = 'session';
-                
+
             case 'project'
-                
+
                 % Only one entry should be present, and it is the identity
                 % of the project file
                 targetLabel = entry{1};
-                
+
                 projFileIdx = find(strcmp(cellfun(@(x) x.name,allProjects{projIdx}.files,'UniformOutput',false),targetLabel));
                 theFileName = allProjects{projIdx}.files{projFileIdx}.name;
                 theContainerID = allProjects{projIdx}.id;
                 theContainerLabel = allProjects{projIdx}.label;
                 theType = 'project';
-                
+
             otherwise
                 error('That is not a file type I know')
         end
-        
+
         % Check if theInputLabel is the rootSession
         if ~isempty(p.Results.rootSession)
             if strcmp(p.Results.rootSession,theInputLabel)
@@ -494,7 +503,7 @@ for ii=nParamRows+1:nRows
                 end
             end
         end
-        
+
         % If it is not a config container, then it is an input, so add this
         % input information to the structure
         if ~strcmp(theContainerType,'config')
@@ -505,8 +514,8 @@ for ii=nParamRows+1:nRows
             inputNotes.(theInputLabel).theContainerType = theContainerType;
         end
     end
-    
-    
+
+
     %% Customize gear configuration
     charConfigKeys = p.Results.configKeys;
 
@@ -515,7 +524,7 @@ for ii=nParamRows+1:nRows
 
     % Obtain the cell array
     configKeys = eval(charConfigKeys);
-    
+
     configVals = eval(p.Results.configVals);
     config = configDefault;
     if ~isempty(configKeys)
@@ -523,7 +532,20 @@ for ii=nParamRows+1:nRows
             config.(configKeys{kk})=configVals{kk};
         end
     end
-    
+
+    % Replace entries that are text booleans with logical values
+    fn = fieldnames(config);
+    for k=1:numel(fn)
+        if isstring(config.(fn{k})) || ischar(config.(fn{k}))
+            switch config.(fn{k})
+                case 'true'
+                    config.(fn{k}) = true;
+                case 'false'
+                    config.(fn{k}) = false;
+            end
+        end
+    end
+
     % Clear from memory any variables that were created to hold custom key
     % values
     if exist('clearSet','var')
@@ -532,17 +554,17 @@ for ii=nParamRows+1:nRows
         end
         clear clearSet
     end
-    
+
     % Grab the tags.
     tags = p.Results.tags;
-    
-    
+
+
     %% Assemble Job
-        
+
     %% Assemble analysis label
     jobLabel = [theGearName ' v' theGearVersion ' [' analysisSubmissionTag '] - ' char(datetime('now','TimeZone','local','Format','yyyy-MM-dd HH:mm'))];
-    
-    
+
+
     %% Check if the analysis has already been performed
     skipFlag = false;
     allAnalyses=fw.getSessionAnalyses(rootSessionID);
@@ -568,13 +590,13 @@ for ii=nParamRows+1:nRows
         end
     end
     if skipFlag
-        
+
         % Determine if the previous job failed
         failedFlag = false;
         if strcmp(priorJobState,'failed')
             failedFlag = true;
         end
-        
+
         % Handle the overwriteExisting choices
         switch overwriteExisting
             case 'never'
@@ -586,7 +608,7 @@ for ii=nParamRows+1:nRows
                     end
                 end
                 continue
-                
+
             case 'failed'
                 if failedFlag
                     fw.deleteSessionAnalysis(allSessions.(thisProjLabel){sessionIdx}.id,priorAnalysisID);
@@ -597,7 +619,7 @@ for ii=nParamRows+1:nRows
                     fprintf(['The analysis ' theGearName ' is already present for ' subjectName ', ' jobLabel '; skipping.\n']);
                     continue
                 end
-                
+
             case 'all'
                 fw.deleteSessionAnalysis(allSessions.(thisProjLabel){sessionIdx}.id,priorAnalysisID);
                 if verbose
@@ -607,32 +629,32 @@ for ii=nParamRows+1:nRows
                         fprintf(['The analysis ' theGearName ' is already present for ' subjectName ', ' jobLabel '; deleting and re-running.\n']);
                     end
                 end
-                
+
             otherwise
                 error('Not a valid value for the overwriteExisting key');
         end
     end
-    
+
     %% Run
     theSessionDestination = fw.get(rootSessionID);
     newJobID = theGear.run('analysisLabel',jobLabel,'inputs',inputs,'config',config,'destination',theSessionDestination,'tags',tags);
-    
+
     %% Add the analysis ID as a notes entry
     theJob = fw.getJob(newJobID);
     theAnalysis = fw.getAnalysis(theJob.destination.id);
     successNote = ['Submitted ' subjectName ' [' theAnalysis.id '] - ' jobLabel ];
     theAnalysis.addNote(successNote);
-    
+
     %% Add a table of inputs as a note
     note = ['InputLabel  -+-  ContainerType -+- ContainerLabel  -+-  FileName\n' ...
-            '----------------------------------------------------------------\n'];
+        '----------------------------------------------------------------\n'];
     inputFieldNames = fieldnames(inputNotes);
     for nn = 1:numel(inputFieldNames)
         newLine = [inputFieldNames{nn} '  -+-  ' inputNotes.(inputFieldNames{nn}).theContainerType '  -+-  ' inputNotes.(inputFieldNames{nn}).theContainerLabel '  -+-  ' inputs{nn}{2}.name '\n'];
         note = [note newLine];
     end
     theAnalysis.addNote(sprintf(note));
-    
+
     %% Report the event
     if verbose
         fprintf([successNote '\n']);
