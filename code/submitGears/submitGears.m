@@ -533,14 +533,16 @@ for ii=nParamRows+1:nRows
         end
     end
 
-    % Replace entries that are text booleans with logical values
+    % Replace entries that are text booleans with logical values. There are
+    % some gears that text a text boolean of {'true' || 'false'}. So, we
+    % only convert those text fields that are all upper case true or false.
     fn = fieldnames(config);
     for k=1:numel(fn)
         if isstring(config.(fn{k})) || ischar(config.(fn{k}))
             switch config.(fn{k})
-                case 'true'
+                case 'TRUE'
                     config.(fn{k}) = true;
-                case 'false'
+                case 'FALSE'
                     config.(fn{k}) = false;
             end
         end
